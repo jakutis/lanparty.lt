@@ -15,7 +15,7 @@ var _ = Describe("contentTypeFor", func() {
 		},
 		Entry("html", "html", "text/html; charset=utf-8", ".html"),
 		Entry("is case-insensitive", "HTML", "text/html; charset=utf-8", ".html"),
-		Entry("pdf", "pdf", "application/pdf", ".pdf"),
+		Entry("markdown", "markdown", "text/markdown; charset=utf-8", ".md"),
 	)
 
 	DescribeTable("reports every other type as unsupported",
@@ -24,8 +24,9 @@ var _ = Describe("contentTypeFor", func() {
 			Expect(ok).To(BeFalse())
 		},
 		Entry("htm", "htm"),
+		Entry("md", "md"),
+		Entry("pdf", "pdf"),
 		Entry("json", "json"),
-		Entry("txt", "txt"),
 		Entry("unknown", "totally-unknown-type"),
 	)
 })

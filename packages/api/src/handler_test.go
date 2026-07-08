@@ -62,15 +62,15 @@ var _ = Describe("POST /v1/representation", func() {
 			Expect(string(b)).To(Equal("<h1>hi</h1>"))
 		})
 
-		It("serves pdf as application/pdf with a .pdf filename", func() {
-			body := `{"type":"pdf","spec":"a greeting"}`
+		It("serves markdown as text/markdown with a .md filename", func() {
+			body := `{"type":"markdown","spec":"a greeting"}`
 			resp, err := http.Post(srv.URL+"/v1/representation", "application/json", strings.NewReader(body))
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			Expect(resp.Header.Get("Content-Type")).To(Equal("application/pdf"))
-			Expect(resp.Header.Get("Content-Disposition")).To(Equal(`attachment; filename="representation.pdf"`))
+			Expect(resp.Header.Get("Content-Type")).To(Equal("text/markdown; charset=utf-8"))
+			Expect(resp.Header.Get("Content-Disposition")).To(Equal(`attachment; filename="representation.md"`))
 		})
 	})
 

@@ -41,7 +41,7 @@ func representationHandler(gen Generator) http.HandlerFunc {
 		ct, ext, ok := contentTypeFor(req.Type)
 		if !ok {
 			log.Printf("representation: rejecting request: unsupported type %q", req.Type)
-			writeError(w, http.StatusUnprocessableEntity, "unsupported type "+strconv.Quote(req.Type)+": only \"html\" and \"pdf\" are supported")
+			writeError(w, http.StatusUnprocessableEntity, "unsupported type "+strconv.Quote(req.Type)+": only \"html\" and \"markdown\" are supported")
 			return
 		}
 

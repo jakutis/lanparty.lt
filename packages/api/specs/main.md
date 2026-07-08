@@ -47,10 +47,10 @@ The response sets two headers derived from the requested `type`:
 
 Only two `type` values are supported, matched case-insensitively:
 
-| `type` | Content-Type               | Extension |
-| ------ | -------------------------- | --------- |
-| `html` | `text/html; charset=utf-8` | `.html`   |
-| `pdf`  | `application/pdf`          | `.pdf`    |
+| `type`     | Content-Type                   | Extension |
+| ---------- | ------------------------------ | --------- |
+| `html`     | `text/html; charset=utf-8`     | `.html`   |
+| `markdown` | `text/markdown; charset=utf-8` | `.md`     |
 
 Any other `type` is rejected with `422 Unprocessable Entity` before the
 Generator is invoked.
