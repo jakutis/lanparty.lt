@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lanparty.lt — generate</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      margin: 0; padding: 2rem;
+      font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 1.5rem; }
+    form { max-width: 48rem; display: grid; gap: 1rem; }
+    label { display: grid; gap: .35rem; font-weight: 600; }
+    select, textarea { font: inherit; padding: .5rem; border: 1px solid #999; border-radius: .25rem; }
+    textarea { min-height: 8rem; resize: vertical; }
+    button {
+      padding: .6rem 1.2rem; font: inherit; font-weight: 600;
+      border: 1px solid #444; border-radius: .25rem; background: #fff; cursor: pointer;
+      justify-self: start;
+    }
+    button:disabled { opacity: .6; cursor: default; }
+    #status { font-style: italic; color: #555; min-height: 1.5em; }
+    #error { color: #b00; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <h1>Generate a representation</h1>
+  <form id="form">
+    <label for="type">Type</label>
+    <select id="type" name="type">
+      <option value="html" selected>html</option>
+      <option value="markdown">markdown</option>
+    </select>
+
+    <label for="spec">Spec</label>
+    <textarea id="spec" name="spec" placeholder="Describe the file to generate…"></textarea>
+
+    <button id="submit" type="submit">Generate</button>
+
+    <p id="status" role="status" aria-live="polite" hidden></p>
+    <p id="error" role="alert" hidden></p>
+  </form>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      // ---- pure, DOM-free helpers (also unit-tested in Node) ----
+
+      // The Markdown blob document shell. Kept in sync with specs/main.md.
+      var MARKDOWN_DOC_STYLE =
+        "      body { margin: 2rem; font: 1rem/1.5 system-ui, sans-serif; line-height: 1.6; }\n" +
+        "      pre, code { font-family: ui-monospace, monospace; }\n" +
+        "      pre { background: #f4f4f4; padding: 1rem; overflow: auto; white-space: pre-wrap; word-wrap: break-word; }\n" +
+        "      code { background: #f4f4f4; padding: 0 .2em; }\n" +
+        "      pre code { background: none; padding: 0; }\n" +
+        "      blockquote { margin: 0 0 1rem; padding: 0 1rem; border-left: .25rem solid #ccc; color: #555; }\n" +
+        "      h1, h2, h3 { line-height: 1.25; }\n" +
+        "      img { max-width: 100%; }\n";
+
+      // validateSpec returns null when the (to-be-trimmed) spec is non-empty,
+      // or an inline error message when it is empty/blank.
+      function validateSpec(spec) {
+        return String(spec == null ? "" : spec).trim() === "" ? "Spec is required." : null;
+      }
+
+      // extractErrorMessage maps a non-200 response (status, body text) to the
+      // inline message to show. Uses the api's {"error":...} shape when present.
+      function extractErrorMessage(status, body) {
+        var msg = "Request failed: " + status;
+        try {
+          var parsed = JSON.parse(body);
+          if (parsed && typeof parsed.error === "string") { msg = parsed.error; }
+        } catch (_) {}
+        return msg;
+      }
+
+      // networkErrorMessage is shown when the fetch itself rejects (no response).
+      function networkErrorMessage() { return "Network error"; }
+
+      // blobMimeType returns the MIME type used for the success blob.
+      function blobMimeType(type) { return "text/html"; }
+
+      // buildBlobDocument returns the blob body for a successful generation.
+      // For html it is the raw generated content. For markdown it is an HTML
+      // document wrapping marked's rendered output. `parse` is the markdown
+      // renderer (marked.parse) injected by the caller; no sanitization is
+      // applied, consistent with the html type (see specs/main.md#trust-model).
+      function buildBlobDocument(type, content, parse) {
+        if (type === "html") { return content; }
+        var rendered = parse(content);
+        return "<!doctype html>\n<html>\n  <head>\n" +
+          "    <meta charset=\"utf-8\">\n" +
+          "    <title>representation</title>\n" +
+          "    <style>\n" + MARKDOWN_DOC_STYLE + "    </style>\n" +
+          "  </head>\n" +
+          "  <body>" + rendered + "</body>\n</html>";
+      }
+
+      var api = {
+        validateSpec: validateSpec,
+        extractErrorMessage: extractErrorMessage,
+        networkErrorMessage: networkErrorMessage,
+        blobMimeType: blobMimeType,
+        buildBlobDocument: buildBlobDocument
+      };
+      if (typeof module !== "undefined" && module.exports) { module.exports = api; }
+      if (typeof globalThis !== "undefined") { globalThis.__lanparty = api; }
+
+      // ---- DOM wiring (browser only; skipped in Node) ----
+      if (typeof document === "undefined") { return; }
+
+      var form = document.getElementById("form");
+      var typeEl = document.getElementById("type");
+      var specEl = document.getElementById("spec");
+      var submitEl = document.getElementById("submit");
+      var statusEl = document.getElementById("status");
+      var errorEl = document.getElementById("error");
+
+      function showStatus(msg) {
+        if (msg == null) { statusEl.hidden = true; statusEl.textContent = ""; }
+        else { statusEl.hidden = false; statusEl.textContent = msg; }
+      }
+      function showError(msg) {
+        if (msg == null) { errorEl.hidden = true; errorEl.textContent = ""; }
+        else { errorEl.hidden = false; errorEl.textContent = msg; }
+      }
+      function setBusy(busy) {
+        submitEl.disabled = busy;
+        if (busy) { showError(null); showStatus("Generating…"); }
+        else { showStatus(null); }
+      }
+
+      function openInTab(type, content) {
+        var blob = new Blob([buildBlobDocument(type, content, window.marked.parse)],
+          { type: blobMimeType(type) });
+        window.location.href = URL.createObjectURL(blob);
+      }
+
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var type = typeEl.value.trim();
+        var spec = specEl.value.trim();
+        var vErr = validateSpec(spec);
+        if (vErr) { showError(vErr); return; }
+        setBusy(true);
+        fetch("/v1/representation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: type, spec: spec }),
+          credentials: "omit",
+          cache: "no-store"
+        }).then(function (resp) {
+          if (resp.status === 200) { return resp.text().then(function (text) { return { ok: true, text: text }; }); }
+          return resp.text().then(function (text) {
+            return { ok: false, msg: extractErrorMessage(resp.status, text) };
+          }, function () { return { ok: false, msg: extractErrorMessage(resp.status, "") }; });
+        }, function () { return { ok: false, msg: networkErrorMessage() }; }).then(function (res) {
+          if (res.ok) { openInTab(type, res.text); }
+          else { setBusy(false); showError(res.msg); }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

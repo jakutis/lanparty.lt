@@ -1,0 +1,25 @@
+# Reverse proxy for the web-frontend package.
+#
+# Serves the static frontend at / and forwards /v1/* to the api backend,
+# so both share one origin (the api sends no CORS headers).
+#
+# Usage, from this package directory:
+#
+#   PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... \
+#     go run ../api/src &
+#   caddy run --config Caddyfile
+#
+# Then open http://localhost:3000 in a browser.
+
+:3000 {
+	# api backend: forward /v1/* unchanged (the api strips the /v1 prefix).
+	handle /v1/* {
+		reverse_proxy localhost:8080
+	}
+
+	# static frontend: serve this package's src/ directory.
+	handle {
+		root * ./src
+		file_server
+	}
+}
