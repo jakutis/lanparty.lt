@@ -1,0 +1,1 @@
+When implementing a spec, follow it literally, but be extremely sensitive and intolerant to any issues in it - when you detect anything confusing or unclear (missing details, imprecisions, contradictions, ambiguous language, missing logical steps and similar) - STOP IMMEDIATELY and describe the issue. Do not start reconsidering or making assumptions - STOP.

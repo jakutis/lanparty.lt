@@ -1,2 +1,1 @@
-- read specs and ensure they are implemented
-- ensure generator spec is completely implemented
+- the specs changed, update the src folder to completely implement the spec
