@@ -106,7 +106,24 @@ func (g *llmGenerator) Generate(ctx context.Context, typ, spec string) ([]byte, 
 	if len(mr.Content) == 0 {
 		return nil, fmt.Errorf("llm returned no content")
 	}
-	content := []byte(strings.TrimSpace(mr.Content[0].Text))
+	// Select the first text-typed content block. Reasoning models may emit a
+	// `thinking` block before the `text` block; reading the first block
+	// blindly would yield empty content. If no block is typed "text", the
+	// generator fails.
+	selected := -1
+	for i := range mr.Content {
+		if mr.Content[i].Type == "text" {
+			selected = i
+			break
+		}
+	}
+	if selected < 0 {
+		return nil, fmt.Errorf("llm returned no text content block")
+	}
+	block := &mr.Content[selected]
+	log.Printf("llm: selected content[%d] type=%q text-len=%d as the file content",
+		selected, block.Type, len(block.Text))
+	content := []byte(strings.TrimSpace(block.Text))
 	log.Printf("llm: produced %d bytes of %q content (stop_reason=%q)",
 		len(content), typ, mr.StopReason)
 	return content, nil

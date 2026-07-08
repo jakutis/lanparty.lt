@@ -42,9 +42,10 @@ a 4-minute timeout.
 ### Response
 
 The response is an Anthropic Messages API message object whose `content` field
-is an array of content blocks. The generator reads the `text` field of the
-first content block, trims surrounding whitespace, and returns it as the
-generated file content.
+is an array of content blocks, each carrying a `type` (e.g. `text` or
+`thinking`). The generator reads the `text` field of the first content block
+whose `type` is `text`, trims surrounding whitespace, and returns it as the
+generated file content. If no content block is typed `text`, `Generate` fails.
 
-A non-2xx status, an empty `content` list, or any transport/decoding error is
-returned as a `Generate` error.
+A non-2xx status, an empty `content` list, no content block typed `text`, or
+any transport/decoding error is returned as a `Generate` error.

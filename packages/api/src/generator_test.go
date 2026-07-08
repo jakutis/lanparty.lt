@@ -112,6 +112,32 @@ var _ = Describe("llmGenerator", func() {
 		})
 	})
 
+	Describe("content block selection", func() {
+		BeforeEach(func() {
+			// A reasoning model may emit a `thinking` block before the `text`
+			// block. Reading the first block blindly would yield empty content.
+			s.body = `{"content":[{"type":"thinking","thinking":"let me think","signature":"sig"},{"type":"text","text":"<h1>hi</h1>"}],"stop_reason":"end_turn"}`
+		})
+
+		It("skips non-text blocks and returns the first text-typed block's content", func() {
+			gen := s.generator()
+			out, err := gen.Generate(context.Background(), "html", "make a page")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(Equal("<h1>hi</h1>"))
+		})
+	})
+
+	Describe("content block failures", func() {
+		It("fails when no content block is typed text", func() {
+			// Every block is non-text (e.g. only reasoning), so there is no
+			// text to return.
+			s.body = `{"content":[{"type":"thinking","thinking":"let me think","signature":"sig"}],"stop_reason":"end_turn"}`
+			gen := s.generator()
+			_, err := gen.Generate(context.Background(), "html", "x")
+			Expect(err).To(MatchError(ContainSubstring("no text content block")))
+		})
+	})
+
 	Describe("configuration failures (before any network call)", func() {
 		It("fails when OPENROUTER_API_KEY is not set", func() {
 			gen := newLLMGenerator(config{apiKey: "", baseURL: s.URL, model: "test/model"})
