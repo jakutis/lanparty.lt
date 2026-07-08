@@ -9,7 +9,6 @@ All logic, all error conditions, everything is extensively logged.
 The default and only implementation is backed by an LLM served via the
 [OpenRouter](https://openrouter.ai/) Anthropic Messages API endpoint - [Create a message](https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message).
 
-
 ### Configuration
 
 Sourced from the environment by `loadConfig`:
@@ -18,7 +17,7 @@ Sourced from the environment by `loadConfig`:
 | ------------------------ | -------- | ------------------------------------ | ------------------------------------ |
 | `OPENROUTER_API_KEY`     | yes      | —                                    | Bearer token for the OpenRouter API. |
 | `OPENROUTER_MODEL`       | yes      | —                                    | The model id to use, e.g. `anthropic/claude-3.5-sonnet`. |
-| `OPENROUTER_BASE_URL`   | no       | `https://openrouter.ai/api/v1`      | Base URL of the OpenRouter API. |
+| `OPENROUTER_BASE_URL`    | no       | `https://openrouter.ai/api/v1`       | Base URL of the OpenRouter API. A trailing slash, if present, is stripped before use. |
 
 A missing `OPENROUTER_API_KEY` or `OPENROUTER_MODEL` causes `Generate` to fail
 immediately, before any network call is made.
@@ -35,6 +34,10 @@ Anthropic Messages API ("Create a message") shape:
    requested file type.
 4. A `messages` array containing a single user message that restates the file
    type and contains the specification to satisfy.
+5. A top-level `stream` field set to `false` (the response is not streamed).
+
+The request carries an `Authorization: Bearer <OPENROUTER_API_KEY>` header and
+a `Content-Type: application/json` header.
 
 The HTTP client used for the call has
 a 4-minute timeout.
