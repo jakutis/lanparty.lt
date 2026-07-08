@@ -2,7 +2,6 @@
 
 The `POST /representation` endpoint does not produce file content itself.
 It delegates generation to a **Generator**.
-Logging follows the [package-wide convention](../main.md).
 
 ## LLM implementation
 
@@ -29,12 +28,28 @@ Anthropic Messages API ("Create a message") shape:
 
 1. A top-level `model` field set to the configured model id.
 2. A top-level `max_tokens` field set to `8192`.
-3. A top-level `system` field (a string) instructing the model to output ONLY
-   raw file content, with no commentary and no markdown code fences, naming the
+3. A top-level `system` field (a string) set to the **system prompt template**
+   (see [Prompt template](#prompt-template)) with `<type>` substituted from the
    requested file type.
-4. A `messages` array containing a single user message that restates the file
-   type and contains the specification to satisfy.
+4. A `messages` array containing a single user message set to the **user
+   message template** (see [Prompt template](#prompt-template)) with `<type>`
+   and `<spec>` substituted from the requested file type and the given
+   specification respectively.
 5. A top-level `stream` field set to `false` (the response is not streamed).
+
+### Prompt template
+
+The `system` field and the single user message are produced from the following
+literal templates, where `<type>` is the requested file type and `<spec>` is the
+given specification:
+
+- **`system`** —
+  `You generate raw file content. Output ONLY the file content, with no commentary and no markdown code fences. The file type is "<type>".`
+  (the value of `<type>` is quoted).
+- **user message** —
+  `Generate a <type> file that satisfies the following specification:\n\n<spec>`
+  (a literal newline separates the preamble from the specification; the value
+  of `<type>` is inserted verbatim, unquoted).
 
 The request carries an `Authorization: Bearer <OPENROUTER_API_KEY>` header and
 a `Content-Type: application/json` header.
