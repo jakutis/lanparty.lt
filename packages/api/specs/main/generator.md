@@ -7,7 +7,7 @@ All logic, all error conditions, everything is extensively logged.
 ## LLM implementation
 
 The default and only implementation is backed by an LLM served via the
-[OpenRouter](https://openrouter.ai/) Anthropic Messages API endpoint - Create a message.
+[OpenRouter](https://openrouter.ai/) Anthropic Messages API endpoint - [Create a message](https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message).
 
 
 ### Configuration
