@@ -1,0 +1,2 @@
+- read specs and ensure they are implemented
+- ensure generator spec is completely implemented
