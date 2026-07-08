@@ -45,26 +45,15 @@ The response sets two headers derived from the requested `type`:
 - `Content-Type`, the MIME type for the requested `type` (e.g. `html` → `text/html; charset=utf-8`).
 - `Content-Disposition: attachment; filename="representation.<ext>"`, where `<ext>` is the file extension for the requested `type` (e.g. `html` → `representation.html`).
 
-The `type` field is matched case-insensitively against this table:
+Only two `type` values are supported, matched case-insensitively:
 
-| `type`              | Content-Type                     | Extension |
-| ------------------- | -------------------------------- | --------- |
-| `html`, `htm`       | `text/html; charset=utf-8`       | `.html`   |
-| `css`               | `text/css; charset=utf-8`        | `.css`    |
-| `js`, `javascript`  | `text/javascript; charset=utf-8` | `.js`     |
-| `json`              | `application/json; charset=utf-8`| `.json`   |
-| `csv`               | `text/csv; charset=utf-8`        | `.csv`    |
-| `txt`, `text`       | `text/plain; charset=utf-8`      | `.txt`    |
-| `md`, `markdown`    | `text/markdown; charset=utf-8`   | `.md`     |
-| `xml`               | `application/xml; charset=utf-8` | `.xml`    |
-| `svg`               | `image/svg+xml`                  | `.svg`    |
-| `png`               | `image/png`                      | `.png`    |
-| `jpg`, `jpeg`       | `image/jpeg`                     | `.jpg`    |
+| `type` | Content-Type               | Extension |
+| ------ | -------------------------- | --------- |
+| `html` | `text/html; charset=utf-8` | `.html`   |
+| `pdf`  | `application/pdf`          | `.pdf`    |
 
-Any other `type` is looked up with Go's `mime.TypeByExtension(".<type>")`; if
-that also finds no match, the Content-Type falls back to
-`application/octet-stream`. In both fallback cases the extension is
-`.<type>` itself.
+Any other `type` is rejected with `422 Unprocessable Entity` before the
+Generator is invoked.
 
 #### Errors
 
@@ -75,7 +64,7 @@ Error responses carry a JSON entity of the shape `{"error":"<message>"}` with
   matching the template: malformed JSON, unknown fields, trailing content
   after the object, or a body larger than 1 MiB.
 - `422 Unprocessable Entity` — `type` or `spec` is missing or empty
-  (after whitespace trimming).
+  (after whitespace trimming), or `type` is not one of the supported values.
 - `500 Internal Server Error` — the Generator failed to produce content.
 
 Requests with a method other than `POST` receive `405 Method Not Allowed`.

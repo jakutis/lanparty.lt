@@ -61,6 +61,17 @@ var _ = Describe("POST /v1/representation", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(b)).To(Equal("<h1>hi</h1>"))
 		})
+
+		It("serves pdf as application/pdf with a .pdf filename", func() {
+			body := `{"type":"pdf","spec":"a greeting"}`
+			resp, err := http.Post(srv.URL+"/v1/representation", "application/json", strings.NewReader(body))
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.Header.Get("Content-Type")).To(Equal("application/pdf"))
+			Expect(resp.Header.Get("Content-Disposition")).To(Equal(`attachment; filename="representation.pdf"`))
+		})
 	})
 
 	Describe("request validation", func() {
@@ -70,6 +81,19 @@ var _ = Describe("POST /v1/representation", func() {
 			defer resp.Body.Close()
 
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		})
+
+		It("rejects unsupported types without invoking the generator", func() {
+			resp, err := http.Post(srv.URL+"/v1/representation", "application/json",
+				strings.NewReader(`{"type":"json","spec":"a config file"}`))
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var e map[string]string
+			Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+			Expect(e["error"]).To(ContainSubstring("unsupported type"))
 		})
 
 		It("rejects malformed JSON bodies with a JSON error entity", func() {

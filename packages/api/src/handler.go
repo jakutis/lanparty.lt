@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -37,6 +38,13 @@ func representationHandler(gen Generator) http.HandlerFunc {
 			return
 		}
 
+		ct, ext, ok := contentTypeFor(req.Type)
+		if !ok {
+			log.Printf("representation: rejecting request: unsupported type %q", req.Type)
+			writeError(w, http.StatusUnprocessableEntity, "unsupported type "+strconv.Quote(req.Type)+": only \"html\" and \"pdf\" are supported")
+			return
+		}
+
 		content, err := gen.Generate(r.Context(), req.Type, req.Spec)
 		if err != nil {
 			log.Printf("representation: generation failed: %v", err)
@@ -45,7 +53,6 @@ func representationHandler(gen Generator) http.HandlerFunc {
 		}
 		log.Printf("representation: generated %d bytes for type=%q", len(content), req.Type)
 
-		ct, ext := contentTypeFor(req.Type)
 		log.Printf("representation: responding with content-type=%q filename=%q", ct, "representation"+ext)
 		w.Header().Set("Content-Type", ct)
 		w.Header().Set("Content-Disposition", `attachment; filename="representation`+ext+`"`)
