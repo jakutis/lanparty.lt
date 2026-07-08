@@ -1,7 +1,8 @@
 # API package
 
 An HTTP server written in Go language.
-All logic, all error conditions, everything is extensively logged.
+
+Package-wide convention: all logic and all error conditions are extensively logged.
 
 ## Running
 

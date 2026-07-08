@@ -2,7 +2,7 @@
 
 The `POST /representation` endpoint does not produce file content itself.
 It delegates generation to a **Generator**.
-All logic, all error conditions, everything is extensively logged.
+Logging follows the [package-wide convention](../main.md).
 
 ## LLM implementation
 

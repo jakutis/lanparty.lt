@@ -1,1 +1,3 @@
+Specs are the source of truth: each package's behavior is defined in `packages/<name>/specs/` (entry point `specs/main.md`), and the code in `packages/<name>/src/` must completely implement it.
+
 When implementing a spec, first read it in full, then follow it literally, but be extremely sensitive and intolerant to any issues in it - anything confusing or unclear (missing details, imprecisions, contradictions, ambiguous language, missing logical steps and similar) that affects behavior. If you detect any, STOP before writing code and describe every issue found. Do not talk yourself out of an issue or resolve it with an assumption and proceed - STOP. Details the spec deliberately leaves open (naming, internal structure) are yours to decide.
