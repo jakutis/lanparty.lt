@@ -16,7 +16,7 @@ Sourced from the environment by `loadConfig`:
 | ------------------------ | -------- | ------------------------------------ | ------------------------------------ |
 | `OPENROUTER_API_KEY`     | yes      | —                                    | Bearer token for the OpenRouter API. |
 | `OPENROUTER_MODEL`       | yes      | —                                    | The model id to use, e.g. `anthropic/claude-3.5-sonnet`. |
-| `OPENROUTER_BASE_URL`    | no       | `https://openrouter.ai/api/v1`       | Base URL of the OpenRouter API. A trailing slash, if present, is stripped before use. |
+| `OPENROUTER_BASE_URL`    | no       | `https://openrouter.ai/api/v1`       | Base URL of the OpenRouter API. Trailing slashes, if present, are stripped before use. |
 
 A missing `OPENROUTER_API_KEY` or `OPENROUTER_MODEL` causes `Generate` to fail
 immediately, before any network call is made.
@@ -52,8 +52,8 @@ given specification:
   (the value of `<type>` is quoted).
 - **user message** —
   `Generate a <type> file that satisfies the following specification:\n\n<spec>`
-  (a literal newline separates the preamble from the specification; the value
-  of `<type>` is inserted verbatim, unquoted).
+  (a blank line — two literal newline characters — separates the preamble from
+  the specification; the value of `<type>` is inserted verbatim, unquoted).
 
 The request carries an `Authorization: Bearer <OPENROUTER_API_KEY>` header and
 a `Content-Type: application/json` header.
@@ -73,4 +73,4 @@ In each iteration, the generator reads the response, which is an Anthropic Messa
    - An `assistant` message containing the exact `content` array received from the model in the current iteration.
    - A `user` message containing an array of `tool_result` blocks, one for each `tool_use` block processed. Each `tool_result` block carries the `tool_use_id` and its `content` is a string with the combined standard output and standard error. If a failing command produces no output, its error text is used as `content` instead. If the command exited with a non-zero code or failed to start, the `is_error` field is set to `true`.
 3. If the loop completes 20 iterations without producing a `text` block, `Generate` fails.
-4. A non-2xx status, an empty `content` list, an unhandled content block combination, or any transport/decoding error immediately terminates the loop and is returned as a `Generate` error.
+4. A non-2xx status, an empty `content` list, a `tool_use` block whose input cannot be decoded, an unhandled content block combination, or any transport/decoding error immediately terminates the loop and is returned as a `Generate` error.

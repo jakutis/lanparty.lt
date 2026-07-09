@@ -56,7 +56,7 @@ These cover internal business logic without network overhead.
 #### Tool execution loop
 
 - **Executes bash commands and returns tool results** — when the response contains a `tool_use` block with a shell command, the generator executes it locally, then continues the conversation with the command output embedded in a `tool_result` block. If the next response contains a `text` block, that text is returned.
-- **Errors after 20 iterations without text** — when the model returns only `tool_use` blocks repeatedly, `Generate` fails with an error mentioning the 20-iteration limit.
+- **Errors after 20 iterations without text** — when the model returns only `tool_use` blocks repeatedly, `Generate` fails with an error mentioning the 20-iteration limit, after making exactly 20 upstream requests.
 
 #### Content block selection
 
@@ -70,6 +70,7 @@ These cover internal business logic without network overhead.
 
 - **Errors when API key is missing** — `Generate` fails with an error mentioning `OPENROUTER_API_KEY`, without making a network call.
 - **Errors when model is missing** — `Generate` fails with an error mentioning `OPENROUTER_MODEL`, without making a network call.
+- **Does not contact the API when configuration is missing** — with a missing API key, `Generate` returns without any request reaching the upstream server.
 
 #### Response failures
 

@@ -7,6 +7,8 @@ Package-wide convention: all logic and all error conditions are extensively logg
 
 ## Running
 
+All commands below are run from the `packages/api/code` directory.
+
 Using `make`:
 ```bash
 PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... make run
@@ -30,6 +32,10 @@ curl -XPOST localhost:8080/v1/representation -d '{"type":"html","spec":"a hello 
 `PORT` is optional and defaults to `8080`; it selects the TCP port the server
 listens on. The `OPENROUTER_*` variables are documented in the
 [Generator configuration](./main/generator.md#configuration).
+
+The HTTP server is configured with a 10-second read-header timeout, a
+60-second read timeout, and a 5-minute write timeout (headroom above the
+Generator's 4-minute upstream HTTP timeout).
 
 ## Verifying
 
@@ -99,7 +105,8 @@ The following messages are part of the endpoint contract:
   `fields 'type' and 'spec' are required`.
 - An unsupported type has the error message
   `unsupported type "<type>": only "html" and "markdown" are supported`, where
-  `<type>` is the trimmed request value JSON-quoted as a string.
+  `<type>` is the trimmed request value quoted as a Go string literal
+  (`strconv.Quote`).
 - A Generator failure has the error message beginning `generation failed: `,
   followed by the Generator error.
 
