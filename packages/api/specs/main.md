@@ -1,6 +1,7 @@
 # API package
 
-An HTTP server written in Go language.
+An HTTP server written in Go language. Running or testing this package requires
+Go 1.26, as declared by its module.
 
 Package-wide convention: all logic and all error conditions are extensively logged.
 
@@ -10,6 +11,12 @@ Using `make`:
 ```bash
 PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... make run
 ```
+
+`make run` first checks that `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are
+both non-empty, and fails without starting the server when either is absent.
+
+`make curl` sends the example `html` request below to the server. It uses
+`PORT` when non-empty and otherwise uses port `8080`.
 
 Alternatively, using `go run`:
 ```bash
@@ -30,7 +37,9 @@ See [./main/verifying.md](./main/verifying.md).
 
 ## Endpoints
 
-All endpoints are prefixed with /v1.
+All endpoints are prefixed with `/v1`. The server strips that prefix before
+dispatching to the endpoint handlers, so the endpoint below is served at
+`POST /v1/representation`.
 
 ### POST /representation
 
@@ -62,6 +71,10 @@ Only two `type` values are supported, matched case-insensitively:
 Any other `type` is rejected with `422 Unprocessable Entity` before the
 Generator is invoked.
 
+Type matching only affects validation and the response headers. After trimming,
+the Generator receives the requested `type` with its original casing (for
+example, `HTML` remains `HTML` in its prompts).
+
 #### Errors
 
 Error responses carry a JSON entity of the shape `{"error":"<message>"}` with
@@ -75,6 +88,20 @@ Error responses carry a JSON entity of the shape `{"error":"<message>"}` with
 - `500 Internal Server Error` — the Generator failed to produce content.
 
 Requests with a method other than `POST` receive `405 Method Not Allowed`.
+
+#### Error messages
+
+The following messages are part of the endpoint contract:
+
+- A request rejected as malformed has an error message beginning
+  `invalid request body: `, followed by the decoding reason.
+- A request with a missing or blank `type` or `spec` has the error message
+  `fields 'type' and 'spec' are required`.
+- An unsupported type has the error message
+  `unsupported type "<type>": only "html" and "markdown" are supported`, where
+  `<type>` is the trimmed request value JSON-quoted as a string.
+- A Generator failure has the error message beginning `generation failed: `,
+  followed by the Generator error.
 
 ## Generator
 

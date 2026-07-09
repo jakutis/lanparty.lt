@@ -21,6 +21,9 @@ Sourced from the environment by `loadConfig`:
 A missing `OPENROUTER_API_KEY` or `OPENROUTER_MODEL` causes `Generate` to fail
 immediately, before any network call is made.
 
+As with the other optional configuration, an empty `OPENROUTER_BASE_URL` is
+treated as unset and uses the default.
+
 ### Request
 
 The generator sends `POST {baseURL}/messages` with a JSON body matching the
@@ -68,6 +71,6 @@ In each iteration, the generator reads the response, which is an Anthropic Messa
 2. If the `content` array contains one or more `tool_use` blocks, the generator executes the provided shell command locally on the host machine using `bash -c`. It captures both standard output and standard error.
    The generator then appends two messages to the `messages` array for the next API call:
    - An `assistant` message containing the exact `content` array received from the model in the current iteration.
-   - A `user` message containing an array of `tool_result` blocks, one for each `tool_use` block processed. Each `tool_result` block carries the `tool_use_id` and its `content` is a string with the combined standard output and standard error. If the command exited with a non-zero code or failed to start, the `is_error` field is set to `true`.
+   - A `user` message containing an array of `tool_result` blocks, one for each `tool_use` block processed. Each `tool_result` block carries the `tool_use_id` and its `content` is a string with the combined standard output and standard error. If a failing command produces no output, its error text is used as `content` instead. If the command exited with a non-zero code or failed to start, the `is_error` field is set to `true`.
 3. If the loop completes 20 iterations without producing a `text` block, `Generate` fails.
 4. A non-2xx status, an empty `content` list, an unhandled content block combination, or any transport/decoding error immediately terminates the loop and is returned as a `Generate` error.

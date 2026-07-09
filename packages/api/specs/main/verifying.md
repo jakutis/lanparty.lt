@@ -25,7 +25,7 @@ Located in `packages/api/code/src/`, these tests cover complex internal business
 
 ## Running tests
 
-From the `packages/api/code` directory:
+From the `packages/api/code` directory (requires Go 1.26):
 
 Using `make`:
 
@@ -38,6 +38,11 @@ For verbose output, including the Ginkgo spec tree:
 ```bash
 make test-verbose
 ```
+
+`make test` and `make test-verbose` do not require OpenRouter configuration.
+
+The external test wrapper requires the `k6` executable. It first looks for
+`k6` on `PATH`, then falls back to `$HOME/go/bin/k6`.
 
 Alternatively, using `go test`:
 

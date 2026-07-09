@@ -6,17 +6,25 @@ checks that cannot be automated without a headless browser.
 
 ## Automated tests
 
-Run, from the package directory (requires Node.js, no other dependencies):
+Run, from the package directory (requires Node.js 18 or later, no other
+dependencies):
 
 ```bash
 node --test test/*.test.js
 ```
+
+Equivalently, run `make test` from the package directory.
 
 The suite is split into two files:
 
 - `test/logic.test.js` — extracts the pure, DOM-free helpers embedded inline
   in `src/index.html` (validation, error extraction, the blob-document
   builder, MIME mapping, the network-error message) and asserts their behavior.
+  When `module.exports` is available, that inline script exposes these helpers
+  as `validateSpec`, `extractErrorMessage`, `networkErrorMessage`,
+  `blobMimeType`, and `buildBlobDocument` so the test can invoke them without a
+  browser DOM. This export is a test hook; normal browser behavior still uses
+  the same helpers through the form's submit listener.
   Covers: empty-spec validation (step 6), the error message contract, the
   `Network error` message (step 7), the blob document contents for `html` and
   `markdown` (steps 3 & 5, at the content level), and the trust model (step 10).

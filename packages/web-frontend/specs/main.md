@@ -49,6 +49,13 @@ Serve this package's directory with any static file server, behind the shared
 reverse proxy described above, then open the page in a browser. The bundled
 `Caddyfile` is the recommended way to run it.
 
+The package also provides these `make` targets from its `code/` directory:
+
+- `make run` checks that `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are
+  non-empty, starts the api backend on port `8080`, and starts Caddy with the
+  bundled `Caddyfile`. Stopping the command also stops the backend it started.
+- `make test` runs the automated Node.js test suite.
+
 ## Verifying
 
 See [./main/verifying.md](./main/verifying.md).
@@ -67,10 +74,13 @@ The `value` of each type option is the lowercase type string sent to the api
 (`html` / `markdown`).
 
 The form is labelled and laid out so each control is visibly associated with its
-label. The page has a clear title and heading. The page loads `marked` from a
-public CDN via a `<script>` tag so that the global `marked` is available before
-any generation can happen. (The CDN is reachable only from the user's browser;
-the frontend's own origin serves only `index.html`.)
+label. Its integration hooks are stable: the form and controls have the IDs
+`form`, `type`, `spec`, and `submit` respectively, and the Type and Spec labels
+use `for="type"` and `for="spec"`. The page has a clear title and heading. The
+page loads `marked` from a public CDN via a `<script>` tag so that the global
+`marked` is available before any generation can happen. (The CDN is reachable
+only from the user's browser; the frontend's own origin serves only
+`index.html`.)
 
 ## Submit flow
 
@@ -81,10 +91,12 @@ On the form `submit` event:
    whitespace.
 3. **Client-side validation:** if `spec` is empty after trimming, the
    submission is aborted and an inline error message is shown on the page; no
-   request is sent. (The api would reject it anyway; validating client-side
-   avoids a round trip.)
+   request is sent. The message is `Spec is required.` (The api would reject
+   it anyway; validating client-side avoids a round trip.)
 4. The Submit button is disabled and a "Generating…" loading indicator is shown
-   inline. The form controls remain visible and unmodified.
+   inline. The form controls remain visible and unmodified. The indicator has
+   ID `status`, uses `role="status"` with `aria-live="polite"`, and is hidden
+   when no request is in progress.
 5. A `POST` request is sent to `/v1/representation` (relative URL) with:
    - `Content-Type: application/json`
    - body `{"type":"<type>","spec":"<spec>"}` (JSON-encoded; `<type>` and
@@ -156,7 +168,8 @@ error, blocked by CORS, etc.):
   - For a failed `fetch` (no response at all), the message is "Network error".
 
 Only one error message is shown at a time; showing a new one replaces any
-previous one.
+previous one. The message has ID `error`, uses `role="alert"`, and is hidden
+when no error is shown.
 
 ## Markdown rendering
 
@@ -177,11 +190,13 @@ requested.
 
 ## `marked` from CDN
 
-`marked` is loaded from a public CDN via a `<script>` tag in `index.html`, using
-the CDN's prebuilt browser/UMD bundle, which exposes a global `marked` with a
-`parse(string) => string` method. The library is not vendored locally; the
-frontend's own origin serves only `index.html`, and the CDN is reached from the
+`marked` is loaded from jsDelivr via a `<script>` tag in `index.html`, using the
+CDN's prebuilt browser/UMD bundle at
+`https://cdn.jsdelivr.net/npm/marked@<version>/marked.min.js`, where
+`<version>` is a three-part numeric release. It exposes a global `marked` with
+a `parse(string) => string` method. The library is not vendored locally; the
+frontend's own origin serves only `index.html`, and jsDelivr is reached from the
 user's browser. The spec does not pin a specific minor version; any recent
-stable release of `marked` whose browser bundle exposes a global `marked` with
-a `parse(string) => string` method satisfies this requirement. (The
-implementation pins a known-good version URL for reproducibility.)
+stable release at that URL shape whose browser bundle exposes the required
+global satisfies this requirement. (The implementation pins a known-good
+version URL for reproducibility.)
