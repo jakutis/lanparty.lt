@@ -33,7 +33,7 @@ because the api itself strips that prefix internally. Usage from the package
 directory:
 
 ```bash
-PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... go run ../api/src &
+PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... go -C ../api run ./src &
 caddy run --config Caddyfile
 ```
 
