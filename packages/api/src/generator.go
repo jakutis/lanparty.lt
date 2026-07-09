@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -47,7 +48,7 @@ func (g *llmGenerator) Generate(ctx context.Context, typ, spec string) ([]byte, 
 	}
 	log.Printf("llm: using model=%q base-url=%q", g.model, g.baseURL)
 
-	body := messagesRequest{
+	reqBody := messagesRequest{
 		Model:     g.model,
 		MaxTokens: 8192,
 		System: fmt.Sprintf(
@@ -63,76 +64,126 @@ func (g *llmGenerator) Generate(ctx context.Context, typ, spec string) ([]byte, 
 			},
 		},
 		Stream: false,
+		Tools: []tool{
+			{Type: "openrouter:bash"},
+		},
 	}
-	raw, err := json.Marshal(body)
-	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
-	}
-	log.Printf("llm: sending %d-byte request to %s", len(raw), g.baseURL+"/messages")
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		g.baseURL+"/messages", bytes.NewReader(raw))
-	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+g.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := g.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("llm request: %w", err)
-	}
-	defer resp.Body.Close()
-	log.Printf("llm: received status %d from %s", resp.StatusCode, g.baseURL)
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read llm response: %w", err)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("llm returned status %d: %s",
-			resp.StatusCode, strings.TrimSpace(string(respBody)))
-	}
-	log.Printf("llm: raw response body (%d bytes): %s", len(respBody), respBody)
-	log.Printf("llm: decoding %d-byte response", len(respBody))
-
-	var mr messagesResponse
-	if err := json.Unmarshal(respBody, &mr); err != nil {
-		return nil, fmt.Errorf("decode llm response: %w", err)
-	}
-	for i, b := range mr.Content {
-		log.Printf("llm: content[%d] type=%q text-len=%d", i, b.Type, len(b.Text))
-	}
-	if len(mr.Content) == 0 {
-		return nil, fmt.Errorf("llm returned no content")
-	}
-	// Select the first text-typed content block. Reasoning models may emit a
-	// `thinking` block before the `text` block; reading the first block
-	// blindly would yield empty content. If no block is typed "text", the
-	// generator fails.
-	selected := -1
-	for i := range mr.Content {
-		if mr.Content[i].Type == "text" {
-			selected = i
-			break
+	for i := 0; i < 20; i++ {
+		raw, err := json.Marshal(reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("marshal request: %w", err)
 		}
+		log.Printf("llm: sending %d-byte request to %s (iteration %d)", len(raw), g.baseURL+"/messages", i+1)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+			g.baseURL+"/messages", bytes.NewReader(raw))
+		if err != nil {
+			return nil, fmt.Errorf("build request: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+g.apiKey)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := g.client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("llm request: %w", err)
+		}
+		
+		log.Printf("llm: received status %d from %s", resp.StatusCode, g.baseURL)
+
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("read llm response: %w", err)
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("llm returned status %d: %s",
+				resp.StatusCode, strings.TrimSpace(string(respBody)))
+		}
+		log.Printf("llm: raw response body (%d bytes): %s", len(respBody), respBody)
+		log.Printf("llm: decoding %d-byte response", len(respBody))
+
+		var mr messagesResponse
+		if err := json.Unmarshal(respBody, &mr); err != nil {
+			return nil, fmt.Errorf("decode llm response: %w", err)
+		}
+		for j, b := range mr.Content {
+			log.Printf("llm: content[%d] type=%q text-len=%d", j, b.Type, len(b.Text))
+		}
+		if len(mr.Content) == 0 {
+			return nil, fmt.Errorf("llm returned no content")
+		}
+
+		selected := -1
+		for j := range mr.Content {
+			if mr.Content[j].Type == "text" {
+				selected = j
+				break
+			}
+		}
+		if selected >= 0 {
+			block := &mr.Content[selected]
+			log.Printf("llm: selected content[%d] type=%q text-len=%d as the file content",
+				selected, block.Type, len(block.Text))
+			content := []byte(strings.TrimSpace(block.Text))
+			log.Printf("llm: produced %d bytes of %q content (stop_reason=%q)",
+				len(content), typ, mr.StopReason)
+			return content, nil
+		}
+
+		var toolResults []contentBlock
+		for _, b := range mr.Content {
+			if b.Type == "tool_use" {
+				var input struct {
+					Command string `json:"command"`
+				}
+				if err := json.Unmarshal(b.Input, &input); err != nil {
+					return nil, fmt.Errorf("unmarshal tool input: %w", err)
+				}
+
+				log.Printf("llm: executing bash command: %s", input.Command)
+				cmd := exec.CommandContext(ctx, "bash", "-c", input.Command)
+				out, err := cmd.CombinedOutput()
+				
+				res := contentBlock{
+					Type:      "tool_result",
+					ToolUseID: b.ID,
+					Content:   string(out),
+					IsError:   err != nil,
+				}
+				if err != nil && len(out) == 0 {
+					res.Content = err.Error()
+				}
+				toolResults = append(toolResults, res)
+			}
+		}
+
+		if len(toolResults) == 0 {
+			return nil, fmt.Errorf("llm returned no text content block and no tool calls")
+		}
+
+		reqBody.Messages = append(reqBody.Messages, message{
+			Role:    "assistant",
+			Content: mr.Content,
+		})
+		reqBody.Messages = append(reqBody.Messages, message{
+			Role:    "user",
+			Content: toolResults,
+		})
 	}
-	if selected < 0 {
-		return nil, fmt.Errorf("llm returned no text content block")
-	}
-	block := &mr.Content[selected]
-	log.Printf("llm: selected content[%d] type=%q text-len=%d as the file content",
-		selected, block.Type, len(block.Text))
-	content := []byte(strings.TrimSpace(block.Text))
-	log.Printf("llm: produced %d bytes of %q content (stop_reason=%q)",
-		len(content), typ, mr.StopReason)
-	return content, nil
+
+	return nil, fmt.Errorf("llm exceeded maximum 20 iterations without producing text content")
 }
 
 // message is a single entry in the Anthropic Messages API messages array.
 type message struct {
 	Role    string `json:"role"`
-	Content string `json:"content"`
+	Content any    `json:"content"`
+}
+
+// tool defines a tool available to the model.
+type tool struct {
+	Type string `json:"type"`
 }
 
 // messagesRequest is the Anthropic Messages API ("Create a message") request
@@ -143,18 +194,25 @@ type messagesRequest struct {
 	System    string    `json:"system"`
 	Messages  []message `json:"messages"`
 	Stream    bool      `json:"stream"`
+	Tools     []tool    `json:"tools,omitempty"`
 }
 
 // messagesResponse is the Anthropic Messages API message object returned by
-// OpenRouter. Its Content field is an array of content blocks; the generator
-// uses the text of the first block. StopReason is captured only for logging.
+// OpenRouter.
 type messagesResponse struct {
 	Content    []contentBlock `json:"content"`
 	StopReason string         `json:"stop_reason"`
 }
 
-// contentBlock is a single block within an Anthropic Messages API response.
+// contentBlock is a single block within an Anthropic Messages API response,
+// or a block representing tool use/result in requests.
 type contentBlock struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Type       string          `json:"type"`
+	Text       string          `json:"text,omitempty"`
+	ID         string          `json:"id,omitempty"`          // for tool_use
+	Name       string          `json:"name,omitempty"`        // for tool_use
+	Input      json.RawMessage `json:"input,omitempty"`       // for tool_use
+	ToolUseID  string          `json:"tool_use_id,omitempty"` // for tool_result
+	Content    string          `json:"content,omitempty"`     // for tool_result
+	IsError    bool            `json:"is_error,omitempty"`    // for tool_result
 }

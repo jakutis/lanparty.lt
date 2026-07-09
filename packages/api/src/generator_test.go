@@ -26,9 +26,9 @@ type capturedRequest struct {
 // and body, so each spec can exercise a different response condition.
 type apiServer struct {
 	*httptest.Server
-	captured capturedRequest
+	captured []capturedRequest
 	status   int
-	body     string
+	bodies   []string
 }
 
 func newAPIServer() *apiServer {
@@ -38,14 +38,23 @@ func newAPIServer() *apiServer {
 }
 
 func (s *apiServer) handle(w http.ResponseWriter, r *http.Request) {
-	s.captured.method = r.Method
-	s.captured.path = r.URL.Path
-	s.captured.auth = r.Header.Get("Authorization")
-	s.captured.contentType = r.Header.Get("Content-Type")
-	s.captured.body, _ = io.ReadAll(r.Body)
+	b, _ := io.ReadAll(r.Body)
+	s.captured = append(s.captured, capturedRequest{
+		method:      r.Method,
+		path:        r.URL.Path,
+		auth:        r.Header.Get("Authorization"),
+		contentType: r.Header.Get("Content-Type"),
+		body:        b,
+	})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(s.status)
-	_, _ = io.WriteString(w, s.body)
+	if len(s.bodies) > 0 {
+		_, _ = io.WriteString(w, s.bodies[0])
+		s.bodies = s.bodies[1:]
+	} else {
+		// Default to something that won't panic, but probably fails
+		_, _ = io.WriteString(w, `{"content":[]}`)
+	}
 }
 
 // generator returns an llmGenerator pointed at this test server.
@@ -67,7 +76,7 @@ var _ = Describe("llmGenerator", func() {
 
 	Describe("happy path", func() {
 		BeforeEach(func() {
-			s.body = `{"content":[{"type":"text","text":"  <h1>hi</h1>  "}],"stop_reason":"end_turn"}`
+			s.bodies = []string{`{"content":[{"type":"text","text":"  <h1>hi</h1>  "}],"stop_reason":"end_turn"}`}
 		})
 
 		It("returns the first content block's text with surrounding whitespace trimmed", func() {
@@ -80,35 +89,81 @@ var _ = Describe("llmGenerator", func() {
 		It("sends a bearer token derived from the configured api key", func() {
 			gen := s.generator()
 			_, _ = gen.Generate(context.Background(), "html", "x")
-			Expect(s.captured.auth).To(Equal("Bearer test-key"))
+			Expect(s.captured[0].auth).To(Equal("Bearer test-key"))
 		})
 
-		It("posts a JSON body to {baseURL}/messages with model, max_tokens, system and a single user message, stream disabled", func() {
+		It("posts a JSON body to {baseURL}/messages with model, max_tokens, system and a single user message, stream disabled, and openrouter:bash tool", func() {
 			gen := s.generator()
 			_, _ = gen.Generate(context.Background(), "html", "make a page")
 
-			Expect(s.captured.method).To(Equal(http.MethodPost))
-			Expect(s.captured.path).To(Equal("/messages"))
-			Expect(s.captured.contentType).To(Equal("application/json"))
+			Expect(s.captured[0].method).To(Equal(http.MethodPost))
+			Expect(s.captured[0].path).To(Equal("/messages"))
+			Expect(s.captured[0].contentType).To(Equal("application/json"))
 
 			var req messagesRequest
-			Expect(json.Unmarshal(s.captured.body, &req)).To(Succeed())
+			Expect(json.Unmarshal(s.captured[0].body, &req)).To(Succeed())
 			Expect(req.Model).To(Equal("test/model"))
 			Expect(req.MaxTokens).To(Equal(8192))
 			Expect(req.Stream).To(BeFalse())
+			Expect(req.Tools).To(HaveLen(1))
+			Expect(req.Tools[0].Type).To(Equal("openrouter:bash"))
 
-			// Top-level system field: raw file content only, no commentary, no
-			// code fences, and it names the requested file type.
 			Expect(req.System).To(ContainSubstring("ONLY"))
 			Expect(req.System).To(ContainSubstring("code fences"))
 			Expect(req.System).To(ContainSubstring("html"))
 
-			// A single user message that restates the file type and carries
-			// the spec.
 			Expect(req.Messages).To(HaveLen(1))
 			Expect(req.Messages[0].Role).To(Equal("user"))
-			Expect(req.Messages[0].Content).To(ContainSubstring("html"))
-			Expect(req.Messages[0].Content).To(ContainSubstring("make a page"))
+		})
+	})
+	
+	Describe("tool execution loop", func() {
+		BeforeEach(func() {
+			s.bodies = []string{
+				`{"content":[{"type":"tool_use","id":"call_1","name":"bash","input":{"command":"echo hello"}}],"stop_reason":"tool_use"}`,
+				`{"content":[{"type":"text","text":"result of echo"}],"stop_reason":"end_turn"}`,
+			}
+		})
+		
+		It("executes the bash command and passes tool_result back", func() {
+			gen := s.generator()
+			out, err := gen.Generate(context.Background(), "html", "make a page")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(Equal("result of echo"))
+			
+			Expect(s.captured).To(HaveLen(2))
+			
+			var req1 messagesRequest
+			Expect(json.Unmarshal(s.captured[0].body, &req1)).To(Succeed())
+			Expect(req1.Messages).To(HaveLen(1)) // initial user prompt
+			
+			var req2 messagesRequest
+			Expect(json.Unmarshal(s.captured[1].body, &req2)).To(Succeed())
+			Expect(req2.Messages).To(HaveLen(3)) // initial user prompt, assistant tool_use, user tool_result
+			
+			Expect(req2.Messages[1].Role).To(Equal("assistant"))
+			Expect(req2.Messages[2].Role).To(Equal("user"))
+			
+			// Verify tool_result content block
+			contentRaw, err := json.Marshal(req2.Messages[2].Content)
+			Expect(err).NotTo(HaveOccurred())
+			var blocks []contentBlock
+			Expect(json.Unmarshal(contentRaw, &blocks)).To(Succeed())
+			Expect(blocks).To(HaveLen(1))
+			Expect(blocks[0].Type).To(Equal("tool_result"))
+			Expect(blocks[0].ToolUseID).To(Equal("call_1"))
+			Expect(blocks[0].Content).To(Equal("hello\n"))
+		})
+		
+		It("exits with an error if it hits 20 iterations without a text block", func() {
+			s.bodies = make([]string, 25)
+			for i := range s.bodies {
+				s.bodies[i] = `{"content":[{"type":"tool_use","id":"call_1","name":"bash","input":{"command":"echo hello"}}],"stop_reason":"tool_use"}`
+			}
+			gen := s.generator()
+			_, err := gen.Generate(context.Background(), "html", "make a page")
+			Expect(err).To(MatchError(ContainSubstring("maximum 20 iterations")))
+			Expect(s.captured).To(HaveLen(20))
 		})
 	})
 
@@ -116,7 +171,7 @@ var _ = Describe("llmGenerator", func() {
 		BeforeEach(func() {
 			// A reasoning model may emit a `thinking` block before the `text`
 			// block. Reading the first block blindly would yield empty content.
-			s.body = `{"content":[{"type":"thinking","thinking":"let me think","signature":"sig"},{"type":"text","text":"<h1>hi</h1>"}],"stop_reason":"end_turn"}`
+			s.bodies = []string{`{"content":[{"type":"thinking","thinking":"let me think","signature":"sig"},{"type":"text","text":"<h1>hi</h1>"}],"stop_reason":"end_turn"}`}
 		})
 
 		It("skips non-text blocks and returns the first text-typed block's content", func() {
@@ -128,13 +183,11 @@ var _ = Describe("llmGenerator", func() {
 	})
 
 	Describe("content block failures", func() {
-		It("fails when no content block is typed text", func() {
-			// Every block is non-text (e.g. only reasoning), so there is no
-			// text to return.
-			s.body = `{"content":[{"type":"thinking","thinking":"let me think","signature":"sig"}],"stop_reason":"end_turn"}`
+		It("fails when no content block is typed text and no tools are used", func() {
+			s.bodies = []string{`{"content":[{"type":"thinking","thinking":"let me think","signature":"sig"}],"stop_reason":"end_turn"}`}
 			gen := s.generator()
 			_, err := gen.Generate(context.Background(), "html", "x")
-			Expect(err).To(MatchError(ContainSubstring("no text content block")))
+			Expect(err).To(MatchError(ContainSubstring("llm returned no text content block and no tool calls")))
 		})
 	})
 
@@ -154,28 +207,28 @@ var _ = Describe("llmGenerator", func() {
 		It("does not contact the API when configuration is missing", func() {
 			gen := newLLMGenerator(config{apiKey: "", baseURL: s.URL, model: "test/model"})
 			_, _ = gen.Generate(context.Background(), "html", "x")
-			Expect(s.captured).To(BeZero())
+			Expect(s.captured).To(HaveLen(0))
 		})
 	})
 
 	Describe("response failures", func() {
 		It("returns an error on a non-2xx status", func() {
 			s.status = http.StatusBadGateway
-			s.body = `{"error":"upstream"}`
+			s.bodies = []string{`{"error":"upstream"}`}
 			gen := s.generator()
 			_, err := gen.Generate(context.Background(), "html", "x")
 			Expect(err).To(MatchError(ContainSubstring("502")))
 		})
 
 		It("returns an error when the content list is empty", func() {
-			s.body = `{"content":[]}`
+			s.bodies = []string{`{"content":[]}`}
 			gen := s.generator()
 			_, err := gen.Generate(context.Background(), "html", "x")
 			Expect(err).To(MatchError(ContainSubstring("no content")))
 		})
 
 		It("returns an error when the response body cannot be decoded", func() {
-			s.body = `not json`
+			s.bodies = []string{`not json`}
 			gen := s.generator()
 			_, err := gen.Generate(context.Background(), "html", "x")
 			Expect(err).To(HaveOccurred())
