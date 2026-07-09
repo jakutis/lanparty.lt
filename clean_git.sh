@@ -5,6 +5,7 @@ echo "  1. Forcefully remove all git worktrees (except the main working tree)."
 echo "  2. Prune any stale worktree references."
 echo "  3. Checkout the 'main' branch."
 echo "  4. Forcefully delete ALL local branches except 'main'."
+echo "  5. Forcefully delete ALL remote branches except 'main'."
 echo ""
 read -p "Are you sure you want to proceed? [y/N]: " confirm
 
@@ -41,9 +42,19 @@ branches_to_remove=$(git branch --format='%(refname:short)' | grep -v '^main$')
 
 if [ -n "$branches_to_remove" ]; then
     echo "$branches_to_remove" | xargs git branch -D
-    echo "Removed branches."
+    echo "Removed local branches."
 else
-    echo "No other branches to remove."
+    echo "No other local branches to remove."
 fi
+
+echo "Removing remote non-main branches..."
+git branch -r --format='%(refname:short)' | grep -v '/main$' | grep -v '/HEAD$' | while read -r remote_branch; do
+    if [ -n "$remote_branch" ]; then
+        remote="${remote_branch%%/*}"
+        branch="${remote_branch#*/}"
+        echo "Deleting remote branch $branch on $remote..."
+        git push "$remote" --delete "$branch" || echo "Failed to delete remote branch: $branch"
+    fi
+done
 
 echo "✨ Done."
