@@ -28,13 +28,19 @@ The suite is split into two files:
   Covers: empty-spec validation (step 6), the error message contract, the
   `Network error` message (step 7), the blob document contents for `html` and
   `markdown` (steps 3 & 5, at the content level), and the trust model (step 10).
+  It also reads `index.html` directly (no HTTP server) to assert the page
+  loads `marked` from a CDN and has the required form controls (steps 2 & 9),
+  as a quick file-level check that duplicates part of what
+  `test/contract.test.js` verifies over HTTP.
 - `test/contract.test.js` — spins up a Caddyfile-mirroring origin (static
   `src/` at `/`, `/v1/*` proxied to a faithful in-process api stub implementing
   the api spec's status/headers/error-shape) and asserts the HTTP contract.
   Covers: the page is served with the required controls (step 2), `marked` is
-  loaded from a CDN with no local vendored copy (step 9), method-not-allowed
-  (step 4), the 422 validations and error shape (step 6), and the 200
-  html/markdown headers plus the exact request body/`Content-Type` (step 8).
+  loaded from a CDN with no local vendored copy (step 9), method-not-allowed,
+  the 422 validations and error shape (step 6), and the 200 html/markdown
+  headers plus the exact request body/`Content-Type` (step 8). Rejecting
+  non-`POST` methods with `405` has no corresponding manual procedure step
+  below; it is only ever verified automatically.
 
 ### Not automated (manual, browser-only)
 
