@@ -4,7 +4,7 @@ Testing is split into two distinct layers to ensure both comprehensive coverage 
 
 ## 1. API Endpoint Tests (External Blackbox)
 
-Located in `packages/api/test/`, these tests treat the API as a completely opaque compiled binary.
+Located in `packages/api/code/test/`, these tests treat the API as a completely opaque compiled binary.
 
 - **Framework**: HTTP endpoints are tested using [k6](https://k6.io/).
 - **Execution Strategy**: A Go test wrapper (`e2e_test.go`) acts as the orchestrator. When `go test` runs in the `test` directory, the wrapper:
@@ -18,14 +18,14 @@ This architecture guarantees that the API is tested exactly as it would run in p
 
 ## 2. Internal Unit Tests
 
-Located in `packages/api/src/`, these tests cover complex internal business logic without network overhead.
+Located in `packages/api/code/src/`, these tests cover complex internal business logic without network overhead.
 
 - **Framework**: Go's built-in `testing` package, [Ginkgo](https://onsi.github.io/ginkgo/), and [Gomega](https://onsi.github.io/gomega/).
 - **Execution Strategy**: Runs standard Go unit tests to verify internal components (e.g., the LLM generator's iteration limits, content-type mapping).
 
 ## Running tests
 
-From the `packages/api` directory:
+From the `packages/api/code` directory:
 
 Using `make`:
 

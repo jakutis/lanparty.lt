@@ -6,7 +6,7 @@
 # Usage, from this package directory:
 #
 #   PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... \
-#     go -C ../api run ./src &
+#     go -C ../../api/code run ./src &
 #   caddy run --config Caddyfile
 #
 # Then open http://localhost:3000 in a browser.

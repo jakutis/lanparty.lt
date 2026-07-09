@@ -13,7 +13,7 @@
 # the backgrounded api is cleaned up via the EXIT trap.
 run: check-env
 	@trap 'kill $$API_PID 2>/dev/null || true' INT TERM EXIT; \
-	PORT=8080 go -C ../api run ./src & API_PID=$$!; \
+	PORT=8080 go -C ../../api/code run ./src & API_PID=$$!; \
 	caddy run --config Caddyfile
 
 # Run the automated test suite (Node.js only, no other dependencies).

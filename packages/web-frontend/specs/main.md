@@ -25,7 +25,7 @@ static frontend and the api backend, forwarding requests by path:
 For example, a minimal proxy (any HTTP reverse proxy will do — nginx, Caddy,
 `httpd`, etc.): serve this package's files at `/` and proxy `/v1/*` to the api.
 
-This package ships a **reference Caddyfile** (`Caddyfile`, at the package root)
+This package ships a **reference Caddyfile** (`Caddyfile`, in the `code/` directory)
 that implements this routing and listens on `:3000`, forwarding `/v1/*`
 unchanged to the api backend at `localhost:8080` and serving `src/` for
 everything else. The `/v1` prefix is passed through to the api unchanged,
@@ -33,7 +33,7 @@ because the api itself strips that prefix internally. Usage from the package
 directory:
 
 ```bash
-PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... go -C ../api run ./src &
+PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... go -C ../../api/code run ./src &
 caddy run --config Caddyfile
 ```
 
