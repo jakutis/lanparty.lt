@@ -27,11 +27,25 @@ Located in `packages/api/src/`, these tests cover complex internal business logi
 
 From the `packages/api` directory:
 
+Using `make`:
+
+```bash
+make test
+```
+
+For verbose output, including the Ginkgo spec tree:
+
+```bash
+make test-verbose
+```
+
+Alternatively, using `go test`:
+
 ```bash
 go test ./...
 ```
 
-For verbose output, including the Ginkgo spec tree:
+For verbose output:
 
 ```bash
 go test -v ./...

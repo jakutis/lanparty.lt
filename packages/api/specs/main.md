@@ -6,6 +6,12 @@ Package-wide convention: all logic and all error conditions are extensively logg
 
 ## Running
 
+Using `make`:
+```bash
+PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... make run
+```
+
+Alternatively, using `go run`:
 ```bash
 PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... go run ./src
 ```
