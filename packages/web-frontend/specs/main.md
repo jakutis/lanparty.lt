@@ -58,7 +58,9 @@ The package also provides these `make` targets from its `code/` directory:
 
 ## Verifying
 
-See [./main/verifying.md](./main/verifying.md).
+See [./main/verifying.md](./main/verifying.md). The complete case-by-case
+specification for the automated suite in `code/test/` is
+[./tests.md](./tests.md).
 
 ## Page
 
