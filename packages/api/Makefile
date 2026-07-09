@@ -1,4 +1,8 @@
-.PHONY: run test test-verbose check-env
+.PHONY: run test test-verbose check-env curl
+
+curl:
+	curl -XPOST localhost:$(or $(PORT),8080)/v1/representation \
+		-d '{"type":"html","spec":"a hello world web page"}'
 
 run: check-env
 	go run ./src
