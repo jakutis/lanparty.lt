@@ -14,7 +14,11 @@ node --test *.test.js
 ```
 
 `make test` runs the same command. The suite requires Node.js 18 or later and
-no package dependencies.
+the Go toolchain (Go 1.26): the contract and browser tests compile and run the
+real api binary. It has no required Node package dependencies; the browser
+cases additionally use `playwright-core` (installed with
+`make install-browser`) and a Chromium executable, and are skipped when
+`playwright-core` is not installed.
 
 Each numbered item below corresponds to one test case. Cases are grouped by
 their current test file only to make them easy to locate.
@@ -179,9 +183,34 @@ A successful HTML representation request reaches
 {"type":"html","spec":"a hello page"}
 ```
 
+## `verification/browser.test.js`
+
+These cases run in a real (headless) Chromium and are skipped when
+`playwright-core` is not installed (see
+[verifying.md](./verifying.md#automated-tests)). The page's request for the
+marked CDN bundle is intercepted and answered with a passthrough stub, and the
+test asserts the requested URL is the required CDN bundle URL.
+
+### 1. Generate navigates the same tab to an HTML blob
+
+Submitting the form with type `html` and a non-empty Spec navigates the
+current tab to a `blob:` URL, without opening a new tab or popup, and the
+generated HTML is rendered there.
+
+### 2. The back button returns to the retained form
+
+After a successful generation, the browser back button returns to the form
+page, with the previously entered type and Spec still present.
+
+### 3. A script in rendered Markdown output executes
+
+A `markdown` generation whose output carries a raw `<script>` element renders
+with that script *executed* in the result tab — the runtime half of the trust
+model; the content-level half is covered by `logic.test.js`.
+
 ## Browser-only behavior
 
-The automated suite does not automate browser navigation. The manual checks in
-[verifying.md](./verifying.md) cover same-tab blob navigation, using
-the back button to return to the retained form, and actual execution of a raw
-HTML script in rendered Markdown output.
+When `playwright-core` is unavailable, the `browser.test.js` cases above fall
+back to the manual checks in [verifying.md](./verifying.md): same-tab blob
+navigation, using the back button to return to the retained form, and actual
+execution of a raw HTML script in rendered Markdown output.

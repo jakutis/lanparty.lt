@@ -1,13 +1,15 @@
 # Verifying
 
 Verification has two layers: an **automated test suite** (encoding the
-validations and checks below) and a small set of **manual, browser-only**
-checks that cannot be automated without a headless browser.
+validations and checks below, including browser checks driven through a
+headless Chromium) and a **manual procedure** that doubles as a fallback for
+the browser checks when no browser is available.
 
 ## Automated tests
 
 Run, from the package's `verification/` directory (requires Node.js 18 or
-later, no other dependencies):
+later and the Go toolchain — Go 1.26, used to compile the api binary the
+contract tests run against; no Node package dependencies):
 
 ```bash
 node --test *.test.js
@@ -15,7 +17,9 @@ node --test *.test.js
 
 Equivalently, run `make test` from the `verification/` directory.
 
-The suite is split into two files:
+The suite is split into three files (plus `verification/harness.js`, a shared
+non-test helper that builds the api binary and starts the origin/api/fake
+OpenRouter stack):
 
 - `verification/logic.test.js` — extracts the pure, DOM-free helpers embedded inline
   in `implementation/src/index.html` (validation, error extraction, the blob-document
@@ -33,8 +37,11 @@ The suite is split into two files:
   as a quick file-level check that duplicates part of what
   `verification/contract.test.js` verifies over HTTP.
 - `verification/contract.test.js` — spins up a Caddyfile-mirroring origin (static
-  `src/` at `/`, `/v1/*` proxied to a faithful in-process api stub implementing
-  the api spec's status/headers/error-shape) and asserts the HTTP contract.
+  `src/` at `/`, `/v1/*` proxied unchanged to the REAL api binary, compiled from
+  `packages/api/implementation` and configured against a fake OpenRouter
+  upstream; see `verification/harness.js`) and asserts the HTTP contract.
+  Because the api is the real binary, these tests cannot drift from the api
+  spec.
   Covers: the page is served with the required controls (step 2), `marked` is
   loaded from a CDN with no local vendored copy (step 9), method-not-allowed,
   the 422 validations and error shape (step 6), and the 200 html/markdown
@@ -42,9 +49,27 @@ The suite is split into two files:
   non-`POST` methods with `405` has no corresponding manual procedure step
   below; it is only ever verified automatically.
 
-### Not automated (manual, browser-only)
+- `verification/browser.test.js` — drives the page in a real (headless)
+  Chromium via `playwright-core`, against the same origin/api stack as the
+  contract tests. Covers the checks that need a browser: clicking **Generate**
+  **navigates the same tab** to a `text/html` blob URL with no new tab or
+  popup (steps 3 & 9), the **back button** returns to the form with the
+  previous type and spec still entered (step 4), and a `<script>` in rendered
+  markdown output actually *executes* in the rendered tab (step 10 — the
+  trust model). To keep the suite hermetic, the page's request for the marked
+  CDN bundle is intercepted and fulfilled with a passthrough stub
+  (`parse` = identity); the test asserts the page requested the required CDN
+  URL, and real markdown rendering stays covered by `logic.test.js`.
+  `playwright-core` is an optional dependency: install it with
+  `make install-browser`; when it is absent this file is skipped and the rest
+  of the suite runs unchanged. The Chromium executable is resolved from
+  `CHROMIUM_PATH`, then `/opt/pw-browsers/chromium` when present, then
+  `playwright-core`'s own browser installation.
 
-These require a real browser and are verified by hand:
+### Manual fallback (browser-only)
+
+When `playwright-core` or a Chromium executable is unavailable, verify the
+browser checks by hand:
 
 - Step 3 / step 5: clicking **Generate** actually **navigates the same tab** to
   the blob URL (blob navigation, not just the blob's content).
