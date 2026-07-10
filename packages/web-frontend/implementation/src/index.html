@@ -22,7 +22,7 @@
     }
     button:disabled { opacity: .6; cursor: default; }
     #status { font-style: italic; color: #555; min-height: 1.5em; }
-    #error { color: #b00; }
+    #error { color: #b00; max-width: 48rem; }
     [hidden] { display: none !important; }
   </style>
 </head>
@@ -41,8 +41,8 @@
     <button id="submit" type="submit">Generate</button>
 
     <p id="status" role="status" aria-live="polite" hidden></p>
-    <p id="error" role="alert" hidden></p>
   </form>
+  <p id="error" role="alert" hidden></p>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
   <script>
