@@ -4,10 +4,10 @@ Testing is split into two distinct layers to ensure both comprehensive coverage 
 
 ## 1. API Endpoint Tests (External Blackbox)
 
-Located in `packages/api/code/test/`, these tests treat the API as a completely opaque compiled binary.
+Located in `packages/api/verification/`, these tests treat the API as a completely opaque compiled binary.
 
 - **Framework**: HTTP endpoints are tested using [k6](https://k6.io/).
-- **Execution Strategy**: A Go test wrapper acts as the orchestrator. When `go test` runs in the `test` directory, the wrapper:
+- **Execution Strategy**: A Go test wrapper acts as the orchestrator. When `go test` runs in the `verification` directory, the wrapper:
   1. Dynamically compiles the API into a standalone executable binary using `go build`.
   2. Starts a **fake OpenRouter mock server** on a local port.
   3. Finds a free local network port and starts the compiled API binary as a background child process, configured via environment variables (e.g. `PORT` and `OPENROUTER_BASE_URL`).
@@ -19,14 +19,14 @@ This architecture guarantees that the API is tested exactly as it would run in p
 
 ## 2. Internal Unit Tests
 
-Located in `packages/api/code/src/`, these tests cover complex internal business logic without network overhead.
+Located in `packages/api/implementation/src/`, these tests cover complex internal business logic without network overhead.
 
 - **Framework**: Go's built-in `testing` package, [Ginkgo](https://onsi.github.io/ginkgo/), and [Gomega](https://onsi.github.io/gomega/).
 - **Execution Strategy**: Runs standard Go unit tests to verify internal components (e.g., the LLM generator's iteration limits, content-type mapping).
 
 ## Running tests
 
-From the `packages/api/code` directory (requires Go 1.26):
+From the `packages/api/implementation` directory (requires Go 1.26):
 
 Using `make`:
 
@@ -45,14 +45,18 @@ make test-verbose
 The external test wrapper requires the `k6` executable. It first looks for
 `k6` on `PATH`, then falls back to `$HOME/go/bin/k6`.
 
-Alternatively, using `go test`:
+Alternatively, using `go test` — the two layers live in separate Go modules,
+so both commands below are run from the `packages/api/implementation`
+directory:
 
 ```bash
 go test ./...
+go test -C ../verification ./...
 ```
 
 For verbose output:
 
 ```bash
 go test -v ./...
+go test -C ../verification -v ./...
 ```

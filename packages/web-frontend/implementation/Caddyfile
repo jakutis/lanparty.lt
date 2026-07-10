@@ -3,10 +3,10 @@
 # Serves the static frontend at / and forwards /v1/* to the api backend,
 # so both share one origin (the api sends no CORS headers).
 #
-# Usage, from this package directory:
+# Usage, from this package's implementation directory:
 #
 #   PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... \
-#     go -C ../../api/code run ./src &
+#     go -C ../../api/implementation run ./src &
 #   caddy run --config Caddyfile
 #
 # Then open http://localhost:3000 in a browser.

@@ -25,15 +25,15 @@ static frontend and the api backend, forwarding requests by path:
 For example, a minimal proxy (any HTTP reverse proxy will do — nginx, Caddy,
 `httpd`, etc.): serve this package's files at `/` and proxy `/v1/*` to the api.
 
-This package ships a **reference Caddyfile** (`Caddyfile`, in the `code/` directory)
+This package ships a **reference Caddyfile** (`Caddyfile`, in the `implementation/` directory)
 that implements this routing and listens on `:3000`, forwarding `/v1/*`
 unchanged to the api backend at `localhost:8080` and serving `src/` for
 everything else. The `/v1` prefix is passed through to the api unchanged,
-because the api itself strips that prefix internally. Usage from the package
-directory:
+because the api itself strips that prefix internally. Usage from the
+`implementation/` directory:
 
 ```bash
-PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... go -C ../../api/code run ./src &
+PORT=8080 OPENROUTER_API_KEY=... OPENROUTER_MODEL=... go -C ../../api/implementation run ./src &
 caddy run --config Caddyfile
 ```
 
@@ -49,7 +49,7 @@ Serve this package's directory with any static file server, behind the shared
 reverse proxy described above, then open the page in a browser. The bundled
 `Caddyfile` is the recommended way to run it.
 
-The package also provides these `make` targets from its `code/` directory:
+The package also provides these `make` targets from its `implementation/` directory:
 
 - `make run` checks that `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are
   non-empty, starts the api backend on port `8080`, and starts Caddy with the
@@ -59,7 +59,7 @@ The package also provides these `make` targets from its `code/` directory:
 ## Verifying
 
 See [./main/verifying.md](./main/verifying.md). The complete case-by-case
-specification for the automated suite in `code/test/` is
+specification for the automated suite in `verification/` is
 [./tests.md](./tests.md).
 
 ## Page

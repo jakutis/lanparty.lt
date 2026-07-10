@@ -6,19 +6,19 @@ checks that cannot be automated without a headless browser.
 
 ## Automated tests
 
-Run, from the package directory (requires Node.js 18 or later, no other
-dependencies):
+Run, from the package's `implementation/` directory (requires Node.js 18 or
+later, no other dependencies):
 
 ```bash
-node --test test/*.test.js
+node --test ../verification/*.test.js
 ```
 
-Equivalently, run `make test` from the package directory.
+Equivalently, run `make test` from the `implementation/` directory.
 
 The suite is split into two files:
 
-- `test/logic.test.js` — extracts the pure, DOM-free helpers embedded inline
-  in `src/index.html` (validation, error extraction, the blob-document
+- `verification/logic.test.js` — extracts the pure, DOM-free helpers embedded inline
+  in `implementation/src/index.html` (validation, error extraction, the blob-document
   builder, MIME mapping, the network-error message) and asserts their behavior.
   When `module.exports` is available, that inline script exposes these helpers
   as `validateSpec`, `extractErrorMessage`, `networkErrorMessage`,
@@ -31,8 +31,8 @@ The suite is split into two files:
   It also reads `index.html` directly (no HTTP server) to assert the page
   loads `marked` from a CDN and has the required form controls (steps 2 & 9),
   as a quick file-level check that duplicates part of what
-  `test/contract.test.js` verifies over HTTP.
-- `test/contract.test.js` — spins up a Caddyfile-mirroring origin (static
+  `verification/contract.test.js` verifies over HTTP.
+- `verification/contract.test.js` — spins up a Caddyfile-mirroring origin (static
   `src/` at `/`, `/v1/*` proxied to a faithful in-process api stub implementing
   the api spec's status/headers/error-shape) and asserts the HTTP contract.
   Covers: the page is served with the required controls (step 2), `marked` is
@@ -59,7 +59,7 @@ These require a real browser and are verified by hand:
 The frontend is a static page with no build step. Manual verification:
 
 1. Start the api backend (see
-   [../../api/specs/main.md](../../api/specs/main.md)) and put it behind the
+   [../../api/specification/main.md](../../api/specification/main.md)) and put it behind the
    shared reverse proxy (see [../main.md](../main.md#deployment)) so that
    `/v1/representation` reaches the api and `/` serves this package, under one
    origin. The bundled `Caddyfile` is the reference configuration for this;

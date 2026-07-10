@@ -1,18 +1,19 @@
 // HTTP contract tests for the web-frontend deployment.
 //
-// Mirrors the Caddyfile: one origin serves the static frontend (src/) at `/`
-// and forwards `/v1/*` unchanged to the api backend. The api backend here is a
-// faithful in-process stub implementing the api spec's response contract
-// (status codes, Content-Type, Content-Disposition, and the {"error":...}
-// shape — see packages/api/specs/main.md) so we can assert the frontend's
+// Mirrors the Caddyfile: one origin serves the static frontend
+// (implementation/src/) at `/` and forwards `/v1/*` unchanged to the api
+// backend. The api backend here is a faithful in-process stub implementing the
+// api spec's response contract (status codes, Content-Type,
+// Content-Disposition, and the {"error":...} shape — see
+// packages/api/specification/main.md) so we can assert the frontend's
 // runtime assumptions about it WITHOUT depending on the real LLM.
 //
 // These tests cover verifying.md steps 1, 2, 4, 6, 8, 9 and the header/error
 // contract. Browser-only behaviors (same-tab blob navigation, the back button,
 // fetch rejection -> "Network error", and marked rendering) are covered by
-// test/logic.test.js or are manual-only.
+// logic.test.js or are manual-only.
 //
-// Run: node --test test/
+// Run: node --test ../verification/ (from the implementation directory)
 
 "use strict";
 
@@ -22,13 +23,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
 
-const SRC_DIR = path.join(__dirname, "..", "src");
+const SRC_DIR = path.join(__dirname, "..", "implementation", "src");
 
 // The most recent request received by the api stub (for body-shape checks).
 let lastApiRequest = null;
 
 // ---------------------------------------------------------------------------
-// Faithful in-process api backend (mirrors packages/api/specs/main.md).
+// Faithful in-process api backend (mirrors packages/api/specification/main.md).
 // ---------------------------------------------------------------------------
 
 function writeJsonError(res, code, msg) {

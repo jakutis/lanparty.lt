@@ -7,7 +7,7 @@ Package-wide convention: all logic and all error conditions are extensively logg
 
 ## Running
 
-All commands below are run from the `packages/api/code` directory.
+All commands below are run from the `packages/api/implementation` directory.
 
 Using `make`:
 ```bash

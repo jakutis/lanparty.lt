@@ -6,7 +6,7 @@
 // and only the pure helpers execute. The helpers are exported via
 // module.exports / globalThis.__lanparty by the script itself.
 //
-// Run: node --test test/
+// Run: node --test ../verification/ (from the implementation directory)
 
 "use strict";
 
@@ -16,7 +16,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const HTML = fs.readFileSync(path.join(__dirname, "..", "src", "index.html"), "utf8");
+const HTML = fs.readFileSync(path.join(__dirname, "..", "implementation", "src", "index.html"), "utf8");
 
 // Extract the inline (no-src) <script> block from the page.
 function inlineScript() {

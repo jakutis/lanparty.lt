@@ -1,16 +1,16 @@
 # Automated test cases
 
 This document specifies the behavior covered by every automated test in
-`code/test/`. It does not prescribe how that behavior is tested.
+`verification/`. It does not prescribe how that behavior is tested.
 
 See [main.md](./main.md) for the package requirements and
 [main/verifying.md](./main/verifying.md) for how to run the suite and for
 browser-only checks.
 
-Run the automated suite from `code/`:
+Run the automated suite from `implementation/`:
 
 ```bash
-node --test test/*.test.js
+node --test ../verification/*.test.js
 ```
 
 `make test` runs the same command. The suite requires Node.js 18 or later and
@@ -19,7 +19,7 @@ no package dependencies.
 Each numbered item below corresponds to one test case. Cases are grouped by
 their current test file only to make them easy to locate.
 
-## `test/logic.test.js`
+## `verification/logic.test.js`
 
 ### 1. Markdown is loaded from a CDN
 
@@ -111,7 +111,7 @@ content; executing the script requires a browser and is not automated here.
 A script element is retained both in direct HTML output and in Markdown output
 that renders it as HTML. Neither output path sanitizes generated content.
 
-## `test/contract.test.js`
+## `verification/contract.test.js`
 
 ### 1. The shared origin serves the form page
 

@@ -30,7 +30,7 @@ func getFreePort() (string, error) {
 func TestAPIEndpointsWithK6(t *testing.T) {
 	// 1. Compile the main binary
 	binPath := "./testapi.bin"
-	buildCmd := exec.Command("go", "build", "-o", binPath, "../src")
+	buildCmd := exec.Command("go", "build", "-C", "../implementation", "-o", "../verification/testapi.bin", "./src")
 	if out, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to build API binary: %v\n%s", err, out)
 	}
