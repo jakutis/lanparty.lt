@@ -59,8 +59,8 @@ These require a real browser and are verified by hand:
 The frontend is a static page with no build step. Manual verification:
 
 1. Start the api backend (see
-   [../../api/specification/main.md](../../api/specification/main.md)) and put it behind the
-   shared reverse proxy (see [../main.md](../main.md#deployment)) so that
+   [../../../api/specification/implementation/main.md](../../../api/specification/implementation/main.md)) and put it behind the
+   shared reverse proxy (see [../implementation/main.md](../implementation/main.md#deployment)) so that
    `/v1/representation` reaches the api and `/` serves this package, under one
    origin. The bundled `Caddyfile` is the reference configuration for this;
    `caddy run --config Caddyfile` serves the frontend at `http://localhost:3000`

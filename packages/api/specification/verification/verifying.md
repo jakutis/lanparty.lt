@@ -1,6 +1,6 @@
 # Verifying
 
-Testing is split into two distinct layers to ensure both comprehensive coverage and true blackbox isolation. The individual test cases of both layers are enumerated in [../tests.md](../tests.md).
+Testing is split into two distinct layers to ensure both comprehensive coverage and true blackbox isolation. The individual test cases of both layers are enumerated in [./tests.md](./tests.md).
 
 ## 1. API Endpoint Tests (External Blackbox)
 

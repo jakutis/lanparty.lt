@@ -5,7 +5,7 @@
 // backend. The api backend here is a faithful in-process stub implementing the
 // api spec's response contract (status codes, Content-Type,
 // Content-Disposition, and the {"error":...} shape — see
-// packages/api/specification/main.md) so we can assert the frontend's
+// packages/api/specification/implementation/main.md) so we can assert the frontend's
 // runtime assumptions about it WITHOUT depending on the real LLM.
 //
 // These tests cover verifying.md steps 1, 2, 4, 6, 8, 9 and the header/error
@@ -29,7 +29,7 @@ const SRC_DIR = path.join(__dirname, "..", "implementation", "src");
 let lastApiRequest = null;
 
 // ---------------------------------------------------------------------------
-// Faithful in-process api backend (mirrors packages/api/specification/main.md).
+// Faithful in-process api backend (mirrors packages/api/specification/implementation/main.md).
 // ---------------------------------------------------------------------------
 
 function writeJsonError(res, code, msg) {

@@ -1,7 +1,7 @@
 # web-frontend package
 
 A static web page that lets a user request a generated file from the
-[api](../../api) backend and immediately view the result in the **same browser
+[api](../../../api) backend and immediately view the result in the **same browser
 tab**.
 
 There is no build step and no bundler. The frontend is plain HTML, CSS and
@@ -60,9 +60,9 @@ The package also provides these `make` targets:
 
 ## Verifying
 
-See [./main/verifying.md](./main/verifying.md). The complete case-by-case
+See [../verification/verifying.md](../verification/verifying.md). The complete case-by-case
 specification for the automated suite in `verification/` is
-[./tests.md](./tests.md).
+[../verification/tests.md](../verification/tests.md).
 
 ## Page
 

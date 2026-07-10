@@ -1,6 +1,6 @@
 # Specs are the source of truth
 
-Each package's behavior is defined in `packages/<name>/specification/`, with `specification/main.md` as the entry point. The code in `packages/<name>/implementation/` must exhibit exactly the behavior the spec states — all of it, and nothing beyond it. The blackbox tests in `packages/<name>/verification/` verify that it does.
+Each package's behavior is defined in `packages/<name>/specification/`, with `specification/implementation/main.md` as the entry point; the docs describing how the package is verified live in `specification/verification/`. The code in `packages/<name>/implementation/` must exhibit exactly the behavior the spec states — all of it, and nothing beyond it. The blackbox tests in `packages/<name>/verification/` verify that it does.
 
 ## What belongs in a spec
 

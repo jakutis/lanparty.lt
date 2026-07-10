@@ -3,8 +3,8 @@
 This document specifies the behavior covered by every automated test in
 `verification/`. It does not prescribe how that behavior is tested.
 
-See [main.md](./main.md) for the package requirements and
-[main/verifying.md](./main/verifying.md) for how to run the suite and for
+See [main.md](../implementation/main.md) for the package requirements and
+[verifying.md](./verifying.md) for how to run the suite and for
 browser-only checks.
 
 Run the automated suite from `verification/`:
@@ -90,7 +90,7 @@ verbatim in the body of an HTML document. That document has:
   `representation`;
 - a style element; and
 - every Markdown-result style declaration specified in
-  [main.md](./main.md#success), for body text, code and preformatted text,
+  [main.md](../implementation/main.md#success), for body text, code and preformatted text,
   blockquotes, headings, and images.
 
 The document ends with its closing body and HTML tags.
@@ -182,6 +182,6 @@ A successful HTML representation request reaches
 ## Browser-only behavior
 
 The automated suite does not automate browser navigation. The manual checks in
-[main/verifying.md](./main/verifying.md) cover same-tab blob navigation, using
+[verifying.md](./verifying.md) cover same-tab blob navigation, using
 the back button to return to the retained form, and actual execution of a raw
 HTML script in rendered Markdown output.

@@ -31,7 +31,7 @@ curl -XPOST localhost:8080/v1/representation -d '{"type":"html","spec":"a hello 
 
 `PORT` is optional and defaults to `8080`; it selects the TCP port the server
 listens on. The `OPENROUTER_*` variables are documented in the
-[Generator configuration](./main/generator.md#configuration).
+[Generator configuration](./generator.md#configuration).
 
 The HTTP server is configured with a 10-second read-header timeout, a
 60-second read timeout, and a 5-minute write timeout (headroom above the
@@ -39,7 +39,7 @@ Generator's 4-minute upstream HTTP timeout).
 
 ## Verifying
 
-See [./main/verifying.md](./main/verifying.md).
+See [../verification/verifying.md](../verification/verifying.md).
 
 ## Endpoints
 
@@ -118,4 +118,4 @@ The following messages are part of the endpoint contract:
 
 ## Generator
 
-The representation endpoint delegates file generation to a [Generator](./main/generator.md): an LLM-backed component that produces raw file content for a given type and spec from the OpenRouter API.
+The representation endpoint delegates file generation to a [Generator](./generator.md): an LLM-backed component that produces raw file content for a given type and spec from the OpenRouter API.

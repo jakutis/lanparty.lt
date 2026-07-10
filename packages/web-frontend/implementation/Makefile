@@ -2,8 +2,9 @@
 #
 # The frontend is a static page with no build step. `run` starts the api
 # backend and the bundled Caddy reverse proxy so the page and the api share
-# one origin (the api sends no CORS headers). See ../specification/main.md
-# and ../specification/main/verifying.md.
+# one origin (the api sends no CORS headers). See
+# ../specification/implementation/main.md and
+# ../specification/verification/verifying.md.
 
 .PHONY: run check-env
 
