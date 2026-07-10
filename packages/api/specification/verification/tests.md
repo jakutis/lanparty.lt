@@ -10,19 +10,32 @@ These treat the API as an opaque compiled binary.
 
 - **Generates HTML successfully** — `POST /v1/representation` with `type: html` and a non-empty `spec` returns `200 OK`, `Content-Type: text/html; charset=utf-8`, `Content-Disposition: attachment; filename="representation.html"`, and a non-empty body.
 - **Generates Markdown successfully** — `POST /v1/representation` with `type: markdown` and a non-empty `spec` returns `200 OK`, `Content-Type: text/markdown; charset=utf-8`, `Content-Disposition: attachment; filename="representation.md"`, and a non-empty body.
+- **Accepts types case-insensitively and preserves their casing** — a `POST`
+  with `type: HTML` and a non-empty `spec` returns `200 OK` with the html
+  `Content-Type` and `Content-Disposition` headers. The fake upstream replies
+  with a marker body when the user prompt contains `Generate a HTML file`
+  (the original casing), and the test asserts the response body is that
+  marker, proving the Generator received the type with its casing preserved.
 
 ### Request Validation
 
-- **Rejects requests with missing fields** — a `POST` with `type` but no `spec` returns `422 Unprocessable Entity` with a JSON error body containing a non-empty `error` string.
-- **Rejects requests with empty spec after trimming** — a `POST` with `type: html` and `spec: "   "` returns `422 Unprocessable Entity` with a non-empty JSON error.
-- **Rejects unsupported types** — a `POST` with `type: json` and a non-empty `spec` returns `422 Unprocessable Entity` with a non-empty JSON error.
-- **Rejects bodies larger than 1 MiB** — a `POST` whose body exceeds 1 MiB returns `400 Bad Request` with a non-empty JSON error.
-- **Rejects malformed JSON bodies** — a `POST` with an invalid JSON body returns `400 Bad Request` with a non-empty JSON error.
-- **Rejects non-POST HTTP methods** — a `GET` to `/v1/representation` returns `405 Method Not Allowed`.
+- **Rejects requests with missing fields** — a `POST` with `type` but no `spec` returns `422 Unprocessable Entity` with the JSON error message exactly `fields 'type' and 'spec' are required`.
+- **Rejects requests with empty spec after trimming** — a `POST` with `type: html` and `spec: "   "` returns `422 Unprocessable Entity` with the same exact error message.
+- **Rejects a `null` JSON body as missing fields** — a `POST` whose body is the JSON literal `null` returns `422 Unprocessable Entity` (not `400`) with the same exact error message.
+- **Rejects unsupported types** — a `POST` with `type: json` and a non-empty `spec` returns `422 Unprocessable Entity` with the JSON error message exactly `unsupported type "json": only "html" and "markdown" are supported`.
+- **Rejects bodies larger than 1 MiB** — a `POST` whose body exceeds 1 MiB returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
+- **Rejects malformed JSON bodies** — a `POST` with an invalid JSON body returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
+- **Rejects trailing content after the JSON object** — a `POST` whose body is a valid object followed by non-whitespace content returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
+- **Rejects non-POST HTTP methods** — a `GET` to `/v1/representation` returns `405 Method Not Allowed` with an `Allow: POST` header and a plain-text body (`Content-Type: text/plain; charset=utf-8`).
+
+### Routing
+
+- **Redirects the bare `/v1` path** — a `GET /v1` returns `307 Temporary Redirect` with a `Location: /v1/` header.
+- **Rejects unknown paths** — a `GET` to a path outside `/v1` returns `404 Not Found` with `Content-Type: text/plain; charset=utf-8`.
 
 ### Error Handling
 
-- **Surfaces upstream generation failures as 500** — when the upstream generator fails, `POST /v1/representation` returns `500 Internal Server Error` with a non-empty JSON error.
+- **Surfaces upstream generation failures as 500** — when the upstream generator fails, `POST /v1/representation` returns `500 Internal Server Error` with a JSON error beginning `generation failed: `.
 
 ## Internal unit tests
 

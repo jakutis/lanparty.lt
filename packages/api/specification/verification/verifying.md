@@ -48,7 +48,10 @@ make test-verbose
 `make test` and `make test-verbose` do not require OpenRouter configuration.
 
 The external test wrapper requires the `k6` executable. It first looks for
-`k6` on `PATH`, then falls back to `$HOME/go/bin/k6`.
+`k6` on `PATH`, then falls back to `$HOME/go/bin/k6`. If k6 is not installed,
+`make install-k6` (from the `verification` directory) builds and installs it
+into `$HOME/go/bin` using the Go toolchain (`go install go.k6.io/k6@latest`) —
+useful where prebuilt k6 binaries cannot be downloaded.
 
 Alternatively, using `go test` directly in either directory:
 

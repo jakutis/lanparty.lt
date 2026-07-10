@@ -42,7 +42,9 @@ func TestAPIEndpointsWithK6(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		json.Unmarshal(body, &req)
 
-		// Check if we should fail generation
+		// Inspect the user prompt to pick a canned response: fail on demand,
+		// or return a marker proving the requested type's casing survived.
+		uppercaseMarker := false
 		if messages, ok := req["messages"].([]interface{}); ok {
 			for _, msgObj := range messages {
 				msg := msgObj.(map[string]interface{})
@@ -52,8 +54,17 @@ func TestAPIEndpointsWithK6(t *testing.T) {
 						io.WriteString(w, `{"error":"upstream"}`)
 						return
 					}
+					if strings.Contains(content, "Generate a HTML file") {
+						uppercaseMarker = true
+					}
 				}
 			}
+		}
+		if uppercaseMarker {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			io.WriteString(w, `{"content":[{"type":"text","text":"uppercase-type-preserved"}],"stop_reason":"end_turn"}`)
+			return
 		}
 
 		// Happy path
