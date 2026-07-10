@@ -116,7 +116,7 @@ var _ = Describe("llmGenerator", func() {
 			Expect(req.Messages[0].Role).To(Equal("user"))
 		})
 	})
-	
+
 	Describe("tool execution loop", func() {
 		BeforeEach(func() {
 			s.bodies = []string{
@@ -124,26 +124,26 @@ var _ = Describe("llmGenerator", func() {
 				`{"content":[{"type":"text","text":"result of echo"}],"stop_reason":"end_turn"}`,
 			}
 		})
-		
+
 		It("executes the bash command and passes tool_result back", func() {
 			gen := s.generator()
 			out, err := gen.Generate(context.Background(), "html", "make a page")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(out)).To(Equal("result of echo"))
-			
+
 			Expect(s.captured).To(HaveLen(2))
-			
+
 			var req1 messagesRequest
 			Expect(json.Unmarshal(s.captured[0].body, &req1)).To(Succeed())
 			Expect(req1.Messages).To(HaveLen(1)) // initial user prompt
-			
+
 			var req2 messagesRequest
 			Expect(json.Unmarshal(s.captured[1].body, &req2)).To(Succeed())
 			Expect(req2.Messages).To(HaveLen(3)) // initial user prompt, assistant tool_use, user tool_result
-			
+
 			Expect(req2.Messages[1].Role).To(Equal("assistant"))
 			Expect(req2.Messages[2].Role).To(Equal("user"))
-			
+
 			// Verify tool_result content block
 			contentRaw, err := json.Marshal(req2.Messages[2].Content)
 			Expect(err).NotTo(HaveOccurred())
@@ -154,7 +154,7 @@ var _ = Describe("llmGenerator", func() {
 			Expect(blocks[0].ToolUseID).To(Equal("call_1"))
 			Expect(blocks[0].Content).To(Equal("hello\n"))
 		})
-		
+
 		It("exits with an error if it hits 20 iterations without a text block", func() {
 			s.bodies = make([]string, 25)
 			for i := range s.bodies {

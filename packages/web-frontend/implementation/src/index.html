@@ -109,7 +109,6 @@
         buildBlobDocument: buildBlobDocument
       };
       if (typeof module !== "undefined" && module.exports) { module.exports = api; }
-      if (typeof globalThis !== "undefined") { globalThis.__lanparty = api; }
 
       // ---- DOM wiring (browser only; skipped in Node) ----
       if (typeof document === "undefined") { return; }

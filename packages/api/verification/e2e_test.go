@@ -77,7 +77,7 @@ func TestAPIEndpointsWithK6(t *testing.T) {
 		"OPENROUTER_MODEL=test/model",
 		"OPENROUTER_BASE_URL="+fakeOpenRouter.URL,
 	)
-	
+
 	// Start the API process
 	if err := apiCmd.Start(); err != nil {
 		t.Fatalf("failed to start API binary: %v", err)
@@ -89,7 +89,7 @@ func TestAPIEndpointsWithK6(t *testing.T) {
 
 	// Wait a moment for the server to start listening
 	apiURL := "http://localhost:" + port
-	
+
 	// Quick health check loop
 	ready := false
 	for i := 0; i < 20; i++ {

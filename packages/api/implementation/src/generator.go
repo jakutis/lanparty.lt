@@ -88,7 +88,7 @@ func (g *llmGenerator) Generate(ctx context.Context, typ, spec string) ([]byte, 
 		if err != nil {
 			return nil, fmt.Errorf("llm request: %w", err)
 		}
-		
+
 		log.Printf("llm: received status %d from %s", resp.StatusCode, g.baseURL)
 
 		respBody, err := io.ReadAll(resp.Body)
@@ -144,7 +144,7 @@ func (g *llmGenerator) Generate(ctx context.Context, typ, spec string) ([]byte, 
 				log.Printf("llm: executing bash command: %s", input.Command)
 				cmd := exec.CommandContext(ctx, "bash", "-c", input.Command)
 				out, err := cmd.CombinedOutput()
-				
+
 				res := contentBlock{
 					Type:      "tool_result",
 					ToolUseID: b.ID,
@@ -207,12 +207,12 @@ type messagesResponse struct {
 // contentBlock is a single block within an Anthropic Messages API response,
 // or a block representing tool use/result in requests.
 type contentBlock struct {
-	Type       string          `json:"type"`
-	Text       string          `json:"text,omitempty"`
-	ID         string          `json:"id,omitempty"`          // for tool_use
-	Name       string          `json:"name,omitempty"`        // for tool_use
-	Input      json.RawMessage `json:"input,omitempty"`       // for tool_use
-	ToolUseID  string          `json:"tool_use_id,omitempty"` // for tool_result
-	Content    string          `json:"content,omitempty"`     // for tool_result
-	IsError    bool            `json:"is_error,omitempty"`    // for tool_result
+	Type      string          `json:"type"`
+	Text      string          `json:"text,omitempty"`
+	ID        string          `json:"id,omitempty"`          // for tool_use
+	Name      string          `json:"name,omitempty"`        // for tool_use
+	Input     json.RawMessage `json:"input,omitempty"`       // for tool_use
+	ToolUseID string          `json:"tool_use_id,omitempty"` // for tool_result
+	Content   string          `json:"content,omitempty"`     // for tool_result
+	IsError   bool            `json:"is_error,omitempty"`    // for tool_result
 }

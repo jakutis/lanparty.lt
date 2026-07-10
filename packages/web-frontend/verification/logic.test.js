@@ -4,7 +4,7 @@
 // spec). These tests read the page, extract the inline <script>, and run it in
 // a vm sandbox WITHOUT a `document`, so the browser-only DOM wiring is skipped
 // and only the pure helpers execute. The helpers are exported via
-// module.exports / globalThis.__lanparty by the script itself.
+// module.exports by the script itself.
 //
 // Run: make test (or node --test *.test.js) from this directory.
 
