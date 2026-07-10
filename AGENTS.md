@@ -1,6 +1,6 @@
 # Specs are the source of truth
 
-Each package's behavior is defined in `packages/<name>/specification/`, with `specification/main.md` as the entry point. The code in `packages/<name>/implementation/src/` must exhibit exactly the behavior the spec states — all of it, and nothing beyond it. The blackbox tests in `packages/<name>/verification/` verify that it does.
+Each package's behavior is defined in `packages/<name>/specification/`, with `specification/main.md` as the entry point. The code in `packages/<name>/implementation/` must exhibit exactly the behavior the spec states — all of it, and nothing beyond it. The blackbox tests in `packages/<name>/verification/` verify that it does.
 
 ## What belongs in a spec
 
@@ -12,7 +12,7 @@ A spec describes only what can be observed from outside the running process — 
 
 ### One exception: the verification layers
 
-A spec may also document its own verification layers: the test frameworks, the test-suite architecture, and the enumerated test cases. This includes internal unit tests that live alongside the code in `packages/<name>/implementation/src/` and check spec-defined behavior through internal seams. Because these sections describe tests, they may reference internals wherever a test does. They never extend the product contract: any behavior a test checks must already be stated in blackbox terms elsewhere in the spec.
+A spec may also document its own verification layers: the test frameworks, the test-suite architecture, and the enumerated test cases. This includes internal unit tests that live alongside the code in `packages/<name>/implementation/` and check spec-defined behavior through internal seams. Because these sections describe tests, they may reference internals wherever a test does. They never extend the product contract: any behavior a test checks must already be stated in blackbox terms elsewhere in the spec.
 
 ## How to implement a spec
 
