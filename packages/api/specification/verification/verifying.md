@@ -27,6 +27,10 @@ Located in `packages/api/implementation/src/`, these tests cover complex interna
 
 - **Framework**: Go's built-in `testing` package, [Ginkgo](https://onsi.github.io/ginkgo/), and [Gomega](https://onsi.github.io/gomega/).
 - **Execution Strategy**: Runs standard Go unit tests to verify internal components (e.g., the LLM generator's iteration limits, content-type mapping).
+- **Extra requirement**: the command-sandbox cases execute real sandboxed
+  commands, so they need `bwrap` on `PATH` and a kernel permitting
+  unprivileged user namespaces (see the
+  [command sandbox](../implementation/generator.md#command-sandbox)).
 
 ## Running tests
 

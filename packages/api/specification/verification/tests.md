@@ -79,6 +79,43 @@ These cover internal business logic without network overhead.
 - **Executes bash commands and returns tool results** — when the response contains a `tool_use` block with a shell command, the generator executes it locally, then continues the conversation with the command output embedded in a `tool_result` block. If the next response contains a `text` block, that text is returned.
 - **Errors after 20 iterations without text** — when the model returns only `tool_use` blocks repeatedly, generation fails with an error mentioning the 20-iteration limit, after making exactly 20 upstream requests.
 
+#### Command sandbox
+
+These cases drive commands through the tool execution loop and inspect the
+`tool_result` blocks the generator sends upstream. They require `bwrap`
+(see [verifying.md](./verifying.md)).
+
+- **Hides the server's environment** — with `OPENROUTER_API_KEY` set in the
+  server process's environment, a command running `env` reports `HOME=/work`
+  but never the API key's value.
+- **Denies network access** — a command opening a TCP connection (via bash's
+  `/dev/tcp`) to the mock upstream server's address — reachable from the
+  server process itself — fails, and its `tool_result` reports no
+  connectivity.
+- **Runs commands in `/work`** — a command running `pwd` outputs `/work`.
+- **Persists files across commands within one generation** — a first command
+  writes a file, and a second command in the same generation reads its
+  content back.
+- **Isolates generations from each other** — a file written during one
+  `Generate` call does not exist during a subsequent call, whose read
+  attempt produces an erroring `tool_result`.
+- **Removes the scratch directory when generation ends** — after a
+  generation whose command wrote a file completes, no sandbox scratch
+  directories remain in the host's temp directory (the test checks the
+  internal `api-sandbox-` naming seam).
+- **Mounts the system read-only** — a command writing to `/usr` fails with
+  an erroring `tool_result` mentioning a read-only file system.
+- **Kills long-running commands** — using an internal seam that shortens the
+  60-second limit, a command that prints output and then sleeps past the
+  limit produces an erroring `tool_result` that still carries the printed
+  output, and the generation loop continues to a successful text response.
+- **Truncates output at 64 KiB** — a command emitting more than 65536 bytes
+  yields a non-erroring `tool_result` whose content is the first 65536 bytes
+  followed by the `[output truncated]` marker line.
+- **Does not wait for background processes** — a command that starts a
+  30-second background `sleep` and echoes a marker returns the marker
+  promptly (the test asserts completion well before the sleep could finish).
+
 #### Content block selection
 
 - **Skips non-text blocks** — when the response contains a `thinking` block followed by a `text` block, returns the `text` block content.

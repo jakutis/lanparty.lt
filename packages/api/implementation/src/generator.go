@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -27,14 +26,17 @@ type llmGenerator struct {
 	baseURL string
 	model   string
 	client  *http.Client
+	// cmdTimeout bounds each sandboxed tool command; tests shorten it.
+	cmdTimeout time.Duration
 }
 
 func newLLMGenerator(cfg config) *llmGenerator {
 	return &llmGenerator{
-		apiKey:  cfg.apiKey,
-		baseURL: strings.TrimRight(cfg.baseURL, "/"),
-		model:   cfg.model,
-		client:  &http.Client{Timeout: 4 * time.Minute},
+		apiKey:     cfg.apiKey,
+		baseURL:    strings.TrimRight(cfg.baseURL, "/"),
+		model:      cfg.model,
+		client:     &http.Client{Timeout: 4 * time.Minute},
+		cmdTimeout: commandTimeout,
 	}
 }
 
@@ -47,6 +49,9 @@ func (g *llmGenerator) Generate(ctx context.Context, typ, spec string) ([]byte, 
 		return nil, fmt.Errorf("OPENROUTER_MODEL is not configured")
 	}
 	log.Printf("llm: using model=%q base-url=%q", g.model, g.baseURL)
+
+	sb := newSandbox(g.cmdTimeout)
+	defer sb.close()
 
 	reqBody := messagesRequest{
 		Model:     g.model,
@@ -141,17 +146,19 @@ func (g *llmGenerator) Generate(ctx context.Context, typ, spec string) ([]byte, 
 					return nil, fmt.Errorf("unmarshal tool input: %w", err)
 				}
 
-				log.Printf("llm: executing bash command: %s", input.Command)
-				cmd := exec.CommandContext(ctx, "bash", "-c", input.Command)
-				out, err := cmd.CombinedOutput()
+				log.Printf("llm: executing sandboxed bash command: %s", input.Command)
+				out, err := sb.run(ctx, input.Command)
+				if err != nil {
+					log.Printf("llm: sandboxed command failed: %v", err)
+				}
 
 				res := contentBlock{
 					Type:      "tool_result",
 					ToolUseID: b.ID,
-					Content:   string(out),
+					Content:   out,
 					IsError:   err != nil,
 				}
-				if err != nil && len(out) == 0 {
+				if err != nil && out == "" {
 					res.Content = err.Error()
 				}
 				toolResults = append(toolResults, res)

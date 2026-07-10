@@ -3,6 +3,11 @@
 An HTTP server written in Go language. Running or testing this package requires
 Go 1.26, as declared by its module.
 
+Executing model tool commands — and running the unit tests that cover them —
+additionally requires [bubblewrap](https://github.com/containers/bubblewrap)
+(`bwrap`) on `PATH` and a Linux kernel that permits unprivileged user
+namespaces; see the [command sandbox](./generator.md#command-sandbox).
+
 Package-wide convention: the server writes its log to standard error, and
 every request received and every error condition produces at least one log
 line.
