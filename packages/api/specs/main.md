@@ -43,8 +43,7 @@ See [./main/verifying.md](./main/verifying.md).
 
 ## Endpoints
 
-All endpoints are prefixed with `/v1`. The server strips that prefix before
-dispatching to the endpoint handlers, so the endpoint below is served at
+All endpoints are prefixed with `/v1`, so the endpoint below is served at
 `POST /v1/representation`.
 
 ### POST /representation
@@ -86,14 +85,21 @@ example, `HTML` remains `HTML` in its prompts).
 Error responses carry a JSON entity of the shape `{"error":"<message>"}` with
 `Content-Type: application/json; charset=utf-8`:
 
-- `400 Bad Request` — the request body is not a single valid JSON object
-  matching the template: malformed JSON, unknown fields, trailing content
-  after the object, or a body larger than 1 MiB.
+- `400 Bad Request` — the request body is larger than 1 MiB, or is not a
+  single valid JSON object matching the template: malformed JSON, unknown
+  fields, or trailing non-whitespace content after the object.
 - `422 Unprocessable Entity` — `type` or `spec` is missing or empty
   (after whitespace trimming), or `type` is not one of the supported values.
+  A body consisting of the JSON literal `null` is treated as an object with
+  both fields missing and is rejected this way, not with `400`.
 - `500 Internal Server Error` — the Generator failed to produce content.
 
-Requests with a method other than `POST` receive `405 Method Not Allowed`.
+Requests to `/v1/representation` with a method other than `POST` receive
+`405 Method Not Allowed` with an `Allow: POST` header. Requests to any other
+path receive `404 Not Found`, except that a request to exactly `/v1` is
+redirected with `307 Temporary Redirect` and a `Location: /v1/` header. The
+`405` and `404` responses carry a plain-text body
+(`Content-Type: text/plain; charset=utf-8`), not the JSON error entity.
 
 #### Error messages
 

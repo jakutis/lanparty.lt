@@ -1,17 +1,18 @@
 # Verifying
 
-Testing is split into two distinct layers to ensure both comprehensive coverage and true blackbox isolation.
+Testing is split into two distinct layers to ensure both comprehensive coverage and true blackbox isolation. The individual test cases of both layers are enumerated in [../tests.md](../tests.md).
 
 ## 1. API Endpoint Tests (External Blackbox)
 
 Located in `packages/api/code/test/`, these tests treat the API as a completely opaque compiled binary.
 
 - **Framework**: HTTP endpoints are tested using [k6](https://k6.io/).
-- **Execution Strategy**: A Go test wrapper (`e2e_test.go`) acts as the orchestrator. When `go test` runs in the `test` directory, the wrapper:
+- **Execution Strategy**: A Go test wrapper acts as the orchestrator. When `go test` runs in the `test` directory, the wrapper:
   1. Dynamically compiles the API into a standalone executable binary using `go build`.
-  2. Spins up an in-memory `httptest.Server` to act as a **fake OpenRouter mock server**.
+  2. Starts a **fake OpenRouter mock server** on a local port.
   3. Finds a free local network port and starts the compiled API binary as a background child process, configured via environment variables (e.g. `PORT` and `OPENROUTER_BASE_URL`).
-  4. Invokes the `k6 run` command against the running API server.
+  4. Invokes the `k6 run` command against the running API server. A single
+     failing check fails the k6 run, and with it the Go test wrapper.
   5. Cleans up all processes and binaries upon completion.
 
 This architecture guarantees that the API is tested exactly as it would run in production.

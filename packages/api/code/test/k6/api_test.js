@@ -4,6 +4,14 @@ import { check, group } from 'k6';
 const API_URL = __ENV.API_URL || 'http://localhost:8080';
 const ENDPOINT = `${API_URL}/v1/representation`;
 
+// Fail the k6 run (non-zero exit) when any check fails, so the Go test
+// wrapper reports the failure; bare checks do not affect k6's exit code.
+export const options = {
+  thresholds: {
+    checks: ['rate==1'],
+  },
+};
+
 // Helper for sending POST requests with JSON headers
 function postRequest(payload) {
   const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
@@ -70,6 +78,15 @@ export default function () {
       
       check(res, {
         'status is 422': (r) => r.status === 422,
+        'returns valid error message': (r) => getJsonError(r.body) !== '',
+      });
+    });
+
+    group('Rejects bodies larger than 1 MiB', () => {
+      const res = postRequest({ type: 'html', spec: 'a'.repeat(1024 * 1024) });
+
+      check(res, {
+        'status is 400': (r) => r.status === 400,
         'returns valid error message': (r) => getJsonError(r.body) !== '',
       });
     });

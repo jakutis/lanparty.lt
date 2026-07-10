@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -24,7 +25,7 @@ func representationHandler(gen Generator) http.HandlerFunc {
 		log.Printf("representation: received request from %s", r.RemoteAddr)
 
 		var req representationRequest
-		if err := decodeJSON(r, &req); err != nil {
+		if err := decodeJSON(w, r, &req); err != nil {
 			log.Printf("representation: rejecting body: %v", err)
 			writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
 			return
@@ -62,10 +63,14 @@ func representationHandler(gen Generator) http.HandlerFunc {
 }
 
 // decodeJSON decodes a single JSON object from the request body into dst,
-// rejecting unknown fields, oversized bodies and trailing content.
-func decodeJSON(r *http.Request, dst any) error {
+// rejecting bodies larger than 1 MiB, unknown fields and trailing content.
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	const maxBody = 1 << 20 // 1 MiB
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxBody+1))
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBody))
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(dst); err != nil {
 		return err
