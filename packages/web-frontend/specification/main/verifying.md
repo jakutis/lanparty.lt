@@ -6,14 +6,14 @@ checks that cannot be automated without a headless browser.
 
 ## Automated tests
 
-Run, from the package's `implementation/` directory (requires Node.js 18 or
+Run, from the package's `verification/` directory (requires Node.js 18 or
 later, no other dependencies):
 
 ```bash
-node --test ../verification/*.test.js
+node --test *.test.js
 ```
 
-Equivalently, run `make test` from the `implementation/` directory.
+Equivalently, run `make test` from the `verification/` directory.
 
 The suite is split into two files:
 

@@ -7,10 +7,10 @@ See [main.md](./main.md) for the package requirements and
 [main/verifying.md](./main/verifying.md) for how to run the suite and for
 browser-only checks.
 
-Run the automated suite from `implementation/`:
+Run the automated suite from `verification/`:
 
 ```bash
-node --test ../verification/*.test.js
+node --test *.test.js
 ```
 
 `make test` runs the same command. The suite requires Node.js 18 or later and

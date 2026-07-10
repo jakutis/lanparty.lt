@@ -13,7 +13,7 @@
 // fetch rejection -> "Network error", and marked rendering) are covered by
 // logic.test.js or are manual-only.
 //
-// Run: node --test ../verification/ (from the implementation directory)
+// Run: make test (or node --test *.test.js) from this directory.
 
 "use strict";
 

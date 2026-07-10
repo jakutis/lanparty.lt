@@ -6,7 +6,7 @@
 // and only the pure helpers execute. The helpers are exported via
 // module.exports / globalThis.__lanparty by the script itself.
 //
-// Run: node --test ../verification/ (from the implementation directory)
+// Run: make test (or node --test *.test.js) from this directory.
 
 "use strict";
 

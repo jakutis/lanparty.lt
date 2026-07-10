@@ -49,12 +49,14 @@ Serve this package's directory with any static file server, behind the shared
 reverse proxy described above, then open the page in a browser. The bundled
 `Caddyfile` is the recommended way to run it.
 
-The package also provides these `make` targets from its `implementation/` directory:
+The package also provides these `make` targets:
 
-- `make run` checks that `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are
-  non-empty, starts the api backend on port `8080`, and starts Caddy with the
-  bundled `Caddyfile`. Stopping the command also stops the backend it started.
-- `make test` runs the automated Node.js test suite.
+- `make run`, from the `implementation/` directory, checks that
+  `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are non-empty, starts the api
+  backend on port `8080`, and starts Caddy with the bundled `Caddyfile`.
+  Stopping the command also stops the backend it started.
+- `make test`, from the `verification/` directory, runs the automated Node.js
+  test suite.
 
 ## Verifying
 

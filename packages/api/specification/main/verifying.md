@@ -26,15 +26,20 @@ Located in `packages/api/implementation/src/`, these tests cover complex interna
 
 ## Running tests
 
-From the `packages/api/implementation` directory (requires Go 1.26):
+The two layers live in separate Go modules and are run independently
+(both require Go 1.26): the internal unit tests from the
+`packages/api/implementation` directory, and the external blackbox tests
+from the `packages/api/verification` directory. The implementation does not
+reference the verification layer; the dependency points only from
+verification to implementation.
 
-Using `make`:
+In either directory, using `make`:
 
 ```bash
 make test
 ```
 
-For verbose output, including the Ginkgo spec tree:
+For verbose output (in `implementation`, this includes the Ginkgo spec tree):
 
 ```bash
 make test-verbose
@@ -45,18 +50,14 @@ make test-verbose
 The external test wrapper requires the `k6` executable. It first looks for
 `k6` on `PATH`, then falls back to `$HOME/go/bin/k6`.
 
-Alternatively, using `go test` — the two layers live in separate Go modules,
-so both commands below are run from the `packages/api/implementation`
-directory:
+Alternatively, using `go test` directly in either directory:
 
 ```bash
 go test ./...
-go test -C ../verification ./...
 ```
 
 For verbose output:
 
 ```bash
 go test -v ./...
-go test -C ../verification -v ./...
 ```

@@ -2,11 +2,10 @@
 #
 # The frontend is a static page with no build step. `run` starts the api
 # backend and the bundled Caddy reverse proxy so the page and the api share
-# one origin (the api sends no CORS headers). `test` runs the automated
-# Node.js test suite. See ../specification/main.md and
-# ../specification/main/verifying.md.
+# one origin (the api sends no CORS headers). See ../specification/main.md
+# and ../specification/main/verifying.md.
 
-.PHONY: run test check-env
+.PHONY: run check-env
 
 # Serve the frontend at http://localhost:3000 with /v1/* forwarded to the api
 # backend on :8080 (mirrors the bundled Caddyfile). The api backend needs
@@ -16,10 +15,6 @@ run: check-env
 	@trap 'kill $$API_PID 2>/dev/null || true' INT TERM EXIT; \
 	PORT=8080 go -C ../../api/implementation run ./src & API_PID=$$!; \
 	caddy run --config Caddyfile
-
-# Run the automated test suite (Node.js only, no other dependencies).
-test:
-	node --test ../verification/*.test.js
 
 # Verify the env vars required by the api backend (started by `run`).
 check-env:
