@@ -3,7 +3,9 @@
 An HTTP server written in Go language. Running or testing this package requires
 Go 1.26, as declared by its module.
 
-Package-wide convention: all logic and all error conditions are extensively logged.
+Package-wide convention: the server writes its log to standard error, and
+every request received and every error condition produces at least one log
+line.
 
 ## Running
 

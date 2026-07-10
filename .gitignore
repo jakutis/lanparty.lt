@@ -1,0 +1,9 @@
+# Built by the api package's external blackbox test wrapper (e2e_test.go);
+# normally cleaned up on exit, but a crashed run can leave it behind.
+packages/api/verification/testapi.bin
+
+# Optional playwright-core install for the web-frontend browser tests
+# (`make install-browser`).
+packages/web-frontend/verification/node_modules/
+packages/web-frontend/verification/package.json
+packages/web-frontend/verification/package-lock.json
