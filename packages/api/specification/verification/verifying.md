@@ -17,6 +17,10 @@ Located in `packages/api/verification/`, these tests treat the API as a complete
 
 This architecture guarantees that the API is tested exactly as it would run in production.
 
+The external suite also verifies source formatting: `gofmt -l` over the
+package's `implementation/` and `verification/` directories must report no
+files.
+
 ## 2. Internal Unit Tests
 
 Located in `packages/api/implementation/src/`, these tests cover complex internal business logic without network overhead.

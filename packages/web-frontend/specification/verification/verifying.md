@@ -9,7 +9,9 @@ the browser checks when no browser is available.
 
 Run, from the package's `verification/` directory (requires Node.js 18 or
 later and the Go toolchain — Go 1.26, used to compile the api binary the
-contract tests run against; no Node package dependencies):
+contract tests run against; no required Node package dependencies, though
+optional tooling unlocks the browser and formatting checks — see
+`make install-tools` below):
 
 ```bash
 node --test *.test.js
@@ -17,7 +19,7 @@ node --test *.test.js
 
 Equivalently, run `make test` from the `verification/` directory.
 
-The suite is split into three files (plus `verification/harness.js`, a shared
+The suite is split into four files (plus `verification/harness.js`, a shared
 non-test helper that builds the api binary and starts the origin/api/fake
 OpenRouter stack):
 
@@ -61,10 +63,22 @@ OpenRouter stack):
   (`parse` = identity); the test asserts the page requested the required CDN
   URL, and real markdown rendering stays covered by `logic.test.js`.
   `playwright-core` is an optional dependency: install it with
-  `make install-browser`; when it is absent this file is skipped and the rest
+  `make install-tools`; when it is absent this file is skipped and the rest
   of the suite runs unchanged. The Chromium executable is resolved from
   `CHROMIUM_PATH`, then `/opt/pw-browsers/chromium` when present, then
   `playwright-core`'s own browser installation.
+
+- `verification/format.test.js` — verifies source formatting: the page
+  (`implementation/src/index.html`) and every JavaScript file in
+  `verification/` must be prettier-formatted (default options). `prettier` is
+  an optional dependency, mirroring `playwright-core`: install it with
+  `make install-tools`; when it is absent this file is skipped and the rest
+  of the suite runs unchanged. (The api package's Go sources have the
+  equivalent check built into its own verification suite, via `gofmt`.)
+
+Both optional packages are installed by the single `make install-tools`
+target (one npm call — npm prunes packages it was not asked for, so
+installing them separately would remove the other).
 
 ### Manual fallback (browser-only)
 

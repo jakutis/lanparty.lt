@@ -37,6 +37,13 @@ These treat the API as an opaque compiled binary.
 
 - **Surfaces upstream generation failures as 500** — when the upstream generator fails, `POST /v1/representation` returns `500 Internal Server Error` with a JSON error beginning `generation failed: `.
 
+## Source formatting
+
+Run as part of the external suite (`go test` in `verification/`).
+
+- **Go sources are gofmt-formatted** — `gofmt -l` over the package's
+  `implementation/` and `verification/` directories reports no files.
+
 ## Internal unit tests
 
 These cover internal business logic without network overhead.

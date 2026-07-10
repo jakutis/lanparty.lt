@@ -44,16 +44,22 @@ function freePort() {
 function buildApiBinary() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "web-frontend-verify-"));
   const bin = path.join(dir, "api.bin");
-  child_process.execFileSync("go", ["build", "-C", API_IMPL_DIR, "-o", bin, "./src"], {
-    stdio: ["ignore", "inherit", "inherit"],
-  });
+  child_process.execFileSync(
+    "go",
+    ["build", "-C", API_IMPL_DIR, "-o", bin, "./src"],
+    {
+      stdio: ["ignore", "inherit", "inherit"],
+    },
+  );
   return bin;
 }
 
 // A fake OpenRouter Anthropic Messages endpoint returning canned generations.
 function fakeOpenRouterHandler(req, res) {
   let raw = "";
-  req.on("data", (c) => { raw += c; });
+  req.on("data", (c) => {
+    raw += c;
+  });
   req.on("end", () => {
     let prompt = "";
     try {
@@ -65,7 +71,12 @@ function fakeOpenRouterHandler(req, res) {
 
     const reply = (text) => {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ content: [{ type: "text", text }], stop_reason: "end_turn" }));
+      res.end(
+        JSON.stringify({
+          content: [{ type: "text", text }],
+          stop_reason: "end_turn",
+        }),
+      );
     };
 
     if (prompt.includes("fail_generation")) {
@@ -87,11 +98,19 @@ function staticHandler(req, res) {
   if (p === "/") p = "/index.html";
   const fp = path.join(SRC_DIR, p);
   if (!path.resolve(fp).startsWith(path.resolve(SRC_DIR) + path.sep)) {
-    res.writeHead(403); res.end("Forbidden"); return;
+    res.writeHead(403);
+    res.end("Forbidden");
+    return;
   }
   fs.readFile(fp, (err, data) => {
-    if (err) { res.writeHead(404, { "Content-Type": "text/plain" }); res.end("Not Found"); return; }
-    const ct = fp.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream";
+    if (err) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Not Found");
+      return;
+    }
+    const ct = fp.endsWith(".html")
+      ? "text/html; charset=utf-8"
+      : "application/octet-stream";
     res.writeHead(200, { "Content-Type": ct });
     res.end(data);
   });
@@ -126,7 +145,8 @@ async function startStack() {
       const res = await fetch(`http://127.0.0.1:${apiPort}/v1/representation`);
       if (res.status === 405) break;
     } catch (_) {}
-    if (Date.now() > deadline) throw new Error("api binary did not start in time");
+    if (Date.now() > deadline)
+      throw new Error("api binary did not start in time");
     await new Promise((r) => setTimeout(r, 50));
   }
 
@@ -135,20 +155,37 @@ async function startStack() {
   let last = null;
   const origin = http.createServer((req, res) => {
     if (req.url === "/v1" || req.url.startsWith("/v1/")) {
-      const record = { method: req.method, url: req.url, headers: { ...req.headers }, body: "" };
-      const proxied = http.request({
-        host: "127.0.0.1",
-        port: apiPort,
+      const record = {
         method: req.method,
-        path: req.url,
-        headers: req.headers,
-      }, (apiRes) => {
-        res.writeHead(apiRes.statusCode, apiRes.headers);
-        apiRes.pipe(res);
+        url: req.url,
+        headers: { ...req.headers },
+        body: "",
+      };
+      const proxied = http.request(
+        {
+          host: "127.0.0.1",
+          port: apiPort,
+          method: req.method,
+          path: req.url,
+          headers: req.headers,
+        },
+        (apiRes) => {
+          res.writeHead(apiRes.statusCode, apiRes.headers);
+          apiRes.pipe(res);
+        },
+      );
+      req.on("data", (c) => {
+        record.body += c;
+        proxied.write(c);
       });
-      req.on("data", (c) => { record.body += c; proxied.write(c); });
-      req.on("end", () => { last = record; proxied.end(); });
-      proxied.on("error", () => { res.writeHead(502); res.end("Bad Gateway"); });
+      req.on("end", () => {
+        last = record;
+        proxied.end();
+      });
+      proxied.on("error", () => {
+        res.writeHead(502);
+        res.end("Bad Gateway");
+      });
       return;
     }
     staticHandler(req, res);

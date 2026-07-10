@@ -16,7 +16,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const HTML = fs.readFileSync(path.join(__dirname, "..", "implementation", "src", "index.html"), "utf8");
+const HTML = fs.readFileSync(
+  path.join(__dirname, "..", "implementation", "src", "index.html"),
+  "utf8",
+);
 
 // Extract the inline (no-src) <script> block from the page.
 function inlineScript() {
@@ -49,12 +52,12 @@ test("index.html loads marked from a CDN, not a local file", () => {
   assert.match(
     HTML,
     /<script\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/marked@\d+\.\d+\.\d+\/marked\.min\.js"/,
-    "page must load marked from the jsdelivr CDN"
+    "page must load marked from the jsdelivr CDN",
   );
   assert.doesNotMatch(
     HTML,
     /<script\s+src="marked\.min\.js"/,
-    "page must not reference a local marked.min.js"
+    "page must not reference a local marked.min.js",
   );
 });
 
@@ -95,8 +98,11 @@ test("validateSpec accepts non-empty spec", () => {
 
 test("extractErrorMessage uses the api error message when present", () => {
   assert.equal(
-    api.extractErrorMessage(422, '{"error":"fields \'type\' and \'spec\' are required"}'),
-    "fields 'type' and 'spec' are required"
+    api.extractErrorMessage(
+      422,
+      "{\"error\":\"fields 'type' and 'spec' are required\"}",
+    ),
+    "fields 'type' and 'spec' are required",
   );
   assert.equal(api.extractErrorMessage(500, '{"error":"boom"}'), "boom");
 });
@@ -104,8 +110,14 @@ test("extractErrorMessage uses the api error message when present", () => {
 test("extractErrorMessage falls back to status code for non-JSON or missing error", () => {
   assert.equal(api.extractErrorMessage(502, "garbage"), "Request failed: 502");
   assert.equal(api.extractErrorMessage(502, ""), "Request failed: 502");
-  assert.equal(api.extractErrorMessage(400, '{"msg":"x"}'), "Request failed: 400");
-  assert.equal(api.extractErrorMessage(500, '{"error": 42}'), "Request failed: 500");
+  assert.equal(
+    api.extractErrorMessage(400, '{"msg":"x"}'),
+    "Request failed: 400",
+  );
+  assert.equal(
+    api.extractErrorMessage(500, '{"error": 42}'),
+    "Request failed: 500",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -131,16 +143,28 @@ test("blobMimeType is text/html for both types", () => {
 
 test("buildBlobDocument html passes content through unchanged", () => {
   const content = "<!doctype html><html><body><h1>Hi</h1></body></html>";
-  assert.equal(api.buildBlobDocument("html", content, () => {
-    throw new Error("parse must not be called for html");
-  }), content);
+  assert.equal(
+    api.buildBlobDocument("html", content, () => {
+      throw new Error("parse must not be called for html");
+    }),
+    content,
+  );
 });
 
 test("buildBlobDocument markdown wraps rendered output in the spec document", () => {
   const doc = api.buildBlobDocument("markdown", "# Hi", (s) => "<h1>Hi</h1>");
-  assert.ok(doc.startsWith("<!doctype html>\n<html>\n  <head>\n"), "starts with the doc preamble");
-  assert.ok(doc.includes('    <meta charset="utf-8">\n'), "has the charset meta");
-  assert.ok(doc.includes("    <title>representation</title>\n"), "has the title");
+  assert.ok(
+    doc.startsWith("<!doctype html>\n<html>\n  <head>\n"),
+    "starts with the doc preamble",
+  );
+  assert.ok(
+    doc.includes('    <meta charset="utf-8">\n'),
+    "has the charset meta",
+  );
+  assert.ok(
+    doc.includes("    <title>representation</title>\n"),
+    "has the title",
+  );
   assert.ok(doc.includes("    <style>\n"), "has the style block");
   // The exact style lines required by the spec.
   for (const line of [
@@ -156,13 +180,23 @@ test("buildBlobDocument markdown wraps rendered output in the spec document", ()
     assert.ok(doc.includes(line), "style block must include: " + line);
   }
   assert.ok(doc.endsWith("</body>\n</html>"), "ends with closing body/html");
-  assert.ok(doc.includes("<body><h1>Hi</h1></body>"), "rendered output is placed verbatim in the body");
+  assert.ok(
+    doc.includes("<body><h1>Hi</h1></body>"),
+    "rendered output is placed verbatim in the body",
+  );
 });
 
 test("buildBlobDocument markdown calls the injected parse with the source", () => {
   let received = null;
-  api.buildBlobDocument("markdown", "# T", (s) => { received = s; return "<h1>T</h1>"; });
-  assert.equal(received, "# T", "parse is called with the raw markdown content");
+  api.buildBlobDocument("markdown", "# T", (s) => {
+    received = s;
+    return "<h1>T</h1>";
+  });
+  assert.equal(
+    received,
+    "# T",
+    "parse is called with the raw markdown content",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -174,14 +208,21 @@ test("buildBlobDocument markdown calls the injected parse with the source", () =
 test("buildBlobDocument markdown does not sanitize raw HTML (trust model)", () => {
   const md = "# T\n\n<script>alert(1)</script>\n";
   const doc = api.buildBlobDocument("markdown", md, (s) => s); // identity = marked's default passthrough
-  assert.ok(doc.includes("<script>alert(1)</script>"),
-    "raw HTML in markdown survives into the blob document (no sanitization)");
+  assert.ok(
+    doc.includes("<script>alert(1)</script>"),
+    "raw HTML in markdown survives into the blob document (no sanitization)",
+  );
 });
 
 test("html and markdown trust models are consistent (no sanitization in either)", () => {
   const script = "<script>alert(1)</script>";
-  assert.equal(api.buildBlobDocument("html", script, () => null), script,
-    "html content is rendered as live HTML, unsanitized");
-  assert.ok(api.buildBlobDocument("markdown", script, (s) => s).includes(script),
-    "markdown with raw HTML is also rendered as live HTML, unsanitized");
+  assert.equal(
+    api.buildBlobDocument("html", script, () => null),
+    script,
+    "html content is rendered as live HTML, unsanitized",
+  );
+  assert.ok(
+    api.buildBlobDocument("markdown", script, (s) => s).includes(script),
+    "markdown with raw HTML is also rendered as live HTML, unsanitized",
+  );
 });

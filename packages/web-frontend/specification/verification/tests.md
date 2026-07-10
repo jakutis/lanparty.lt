@@ -16,9 +16,9 @@ node --test *.test.js
 `make test` runs the same command. The suite requires Node.js 18 or later and
 the Go toolchain (Go 1.26): the contract and browser tests compile and run the
 real api binary. It has no required Node package dependencies; the browser
-cases additionally use `playwright-core` (installed with
-`make install-browser`) and a Chromium executable, and are skipped when
-`playwright-core` is not installed.
+cases additionally use `playwright-core` and a Chromium executable, the
+formatting cases use `prettier` (both installed with `make install-tools`),
+and each group is skipped when its optional dependency is not installed.
 
 Each numbered item below corresponds to one test case. Cases are grouped by
 their current test file only to make them easy to locate.
@@ -207,6 +207,17 @@ page, with the previously entered type and Spec still present.
 A `markdown` generation whose output carries a raw `<script>` element renders
 with that script *executed* in the result tab — the runtime half of the trust
 model; the content-level half is covered by `logic.test.js`.
+
+## `verification/format.test.js`
+
+Skipped when `prettier` is not installed (see
+[verifying.md](./verifying.md#automated-tests)).
+
+### 1. Sources are prettier-formatted
+
+`implementation/src/index.html` and every JavaScript file in `verification/`
+pass a prettier formatting check with default options (one test case per
+file).
 
 ## Browser-only behavior
 
