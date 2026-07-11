@@ -5,8 +5,8 @@
 Specs are the source of truth — see [AGENTS.md](./AGENTS.md) for the rules.
 Each package under `packages/<name>/` has three parts:
 
-- `specification/` — the package's single integrated spec
-  (`specification/main.md`): the behavior contract together with how the
+- `specification/` — the package's integrated spec, entered through
+  `specification/main.md`: the behavior contract together with how the
   package is verified.
 - `implementation/` — the code, which must exhibit exactly the behavior the
   spec states.

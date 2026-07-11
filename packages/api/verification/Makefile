@@ -1,5 +1,5 @@
 # Makefile for the api package's external blackbox tests. See
-# ../specification/main.md#running-the-tests. Requires the k6 executable.
+# ../specification/running.md#running-the-tests. Requires the k6 executable.
 
 .PHONY: test test-verbose install-k6
 

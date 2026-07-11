@@ -1,5 +1,5 @@
 # Makefile for the web-frontend package's automated test suite. See
-# ../specification/main.md#running-the-tests. Requires Node.js 18 or later and
+# ../specification/running.md#running-the-tests. Requires Node.js 18 or later and
 # the Go toolchain (the contract tests compile and run the real api binary).
 
 .PHONY: test install-tools

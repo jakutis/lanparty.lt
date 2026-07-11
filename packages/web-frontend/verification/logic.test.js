@@ -45,8 +45,8 @@ function loadHelpers() {
 const api = loadHelpers();
 
 // ---------------------------------------------------------------------------
-// Page structure (read from the static file). Mirrors main.md manual
-// procedure steps 2,9.
+// Page structure (read from the static file). Mirrors manual-verification.md
+// steps 2,9.
 // ---------------------------------------------------------------------------
 
 test("index.html loads marked from a CDN, not a local file", () => {
@@ -74,7 +74,7 @@ test("index.html has the required form controls", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateSpec — main.md manual procedure step 6 (empty spec → inline error,
+// validateSpec — manual-verification.md step 6 (empty spec → inline error,
 // no request).
 // ---------------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ test("validateSpec accepts non-empty spec", () => {
 });
 
 // ---------------------------------------------------------------------------
-// extractErrorMessage — main.md error contract + api {error:...} shape.
+// extractErrorMessage — submit-flow.md error contract + api {error:...} shape.
 // ---------------------------------------------------------------------------
 
 test("extractErrorMessage uses the api error message when present", () => {
@@ -123,7 +123,7 @@ test("extractErrorMessage falls back to status code for non-JSON or missing erro
 });
 
 // ---------------------------------------------------------------------------
-// networkErrorMessage — main.md manual procedure step 7 (failed fetch →
+// networkErrorMessage — manual-verification.md step 7 (failed fetch →
 // Network error).
 // ---------------------------------------------------------------------------
 
@@ -141,7 +141,7 @@ test("blobMimeType is text/html for both types", () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildBlobDocument — main.md manual procedure steps 3 & 5 (same-tab blob
+// buildBlobDocument — manual-verification.md steps 3 & 5 (same-tab blob
 // navigation).
 // ---------------------------------------------------------------------------
 
@@ -204,7 +204,7 @@ test("buildBlobDocument markdown calls the injected parse with the source", () =
 });
 
 // ---------------------------------------------------------------------------
-// Trust model — main.md manual procedure step 10. `marked` passes raw HTML through by
+// Trust model — manual-verification.md step 10. `marked` passes raw HTML through by
 // default; the page applies NO sanitization, consistent with the html type.
 // We model marked's passthrough with identity `parse`.
 // ---------------------------------------------------------------------------

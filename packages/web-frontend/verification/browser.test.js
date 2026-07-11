@@ -1,7 +1,7 @@
 // Browser tests for the behaviors that need a real browser: same-tab blob
 // navigation, back-button history, and script execution in rendered markdown
 // (the trust model). These automate the checks listed as browser-only in
-// ../specification/main.md#manual-fallback-for-the-browser-checks.
+// ../specification/manual-verification.md#manual-fallback-for-the-browser-checks.
 //
 // Requires playwright-core (run `make install-tools`) and a Chromium
 // executable: set CHROMIUM_PATH, or /opt/pw-browsers/chromium is used when

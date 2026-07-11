@@ -8,7 +8,7 @@ import (
 )
 
 // Command sandbox parameters; see
-// specification/main.md#command-sandbox.
+// specification/generator.md#command-sandbox.
 const (
 	commandTimeout   = 60 * time.Second
 	maxCommandOutput = 64 * 1024
