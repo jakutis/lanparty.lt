@@ -100,7 +100,7 @@
 
         // ---- pure, DOM-free helpers (also unit-tested in Node) ----
 
-        // The Markdown blob document shell. Kept in sync with specification/implementation/main.md.
+        // The Markdown blob document shell. Kept in sync with specification/main.md.
         var MARKDOWN_DOC_STYLE =
           "      body { margin: 2rem; font: 1rem/1.5 system-ui, sans-serif; line-height: 1.6; }\n" +
           "      pre, code { font-family: ui-monospace, monospace; }\n" +
@@ -146,7 +146,7 @@
         // For html it is the raw generated content. For markdown it is an HTML
         // document wrapping marked's rendered output. `parse` is the markdown
         // renderer (marked.parse) injected by the caller; no sanitization is
-        // applied, consistent with the html type (see specification/implementation/main.md#trust-model).
+        // applied, consistent with the html type (see specification/main.md#trust-model).
         function buildBlobDocument(type, content, parse) {
           if (type === "html") {
             return content;

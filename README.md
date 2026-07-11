@@ -5,18 +5,18 @@
 Specs are the source of truth — see [AGENTS.md](./AGENTS.md) for the rules.
 Each package under `packages/<name>/` has three parts:
 
-- `specification/` — the package's behavior contract
-  (`specification/implementation/main.md` is the entry point) and the docs for
-  how it is verified (`specification/verification/`).
+- `specification/` — the package's single integrated spec
+  (`specification/main.md`): the behavior contract together with how the
+  package is verified.
 - `implementation/` — the code, which must exhibit exactly the behavior the
   spec states.
 - `verification/` — the blackbox tests that verify it.
 
 Packages:
 
-- [api](packages/api/specification/implementation/main.md) — an HTTP server
+- [api](packages/api/specification/main.md) — an HTTP server
   that generates files with an LLM via OpenRouter.
-- [web-frontend](packages/web-frontend/specification/implementation/main.md) —
+- [web-frontend](packages/web-frontend/specification/main.md) —
   a static page for requesting a generated file and viewing it in the browser.
 
 ## Maintenance scripts

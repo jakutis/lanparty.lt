@@ -1,7 +1,7 @@
 // Test harness for the web-frontend verification suite.
 //
 // Starts the full deployment contract described in
-// ../specification/implementation/main.md#deployment, using the REAL api
+// ../specification/main.md#deployment, using the REAL api
 // binary (compiled from ../../api/implementation with the Go toolchain) so
 // the suite cannot drift from the api's actual behavior:
 //

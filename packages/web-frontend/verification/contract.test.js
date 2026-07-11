@@ -6,7 +6,7 @@
 // the api is the real compiled binary, these tests cannot drift from the api
 // spec — its status codes, headers, and error messages are asserted directly.
 //
-// These tests cover verifying.md steps 1, 2, 4, 6, 8, 9 and the header/error
+// These tests cover main.md manual procedure steps 1, 2, 4, 6, 8, 9 and the header/error
 // contract. Browser-only behaviors (same-tab blob navigation, the back button,
 // fetch rejection -> "Network error", and marked rendering) are covered by
 // logic.test.js and browser.test.js.
