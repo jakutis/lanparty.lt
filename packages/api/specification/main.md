@@ -12,6 +12,24 @@ Package-wide convention: the server writes its log to standard error, and
 every request received and every error condition produces at least one log
 line.
 
+Testing is split into two distinct layers to ensure both comprehensive
+coverage and true blackbox isolation:
+
+- **External blackbox tests** — located in `packages/api/verification/`,
+  these treat the API as a completely opaque compiled binary and drive its
+  HTTP endpoints with [k6](https://k6.io/).
+- **Internal unit tests** — located in `packages/api/implementation/src/`,
+  these cover complex internal business logic (e.g., the LLM generator's
+  iteration limits, content-type mapping) without network overhead, using
+  Go's built-in `testing` package, [Ginkgo](https://onsi.github.io/ginkgo/),
+  and [Gomega](https://onsi.github.io/gomega/).
+
+Each section below ends with a **Verification** subsection enumerating the
+test cases that cover its behavior, labelled with the layer they belong to.
+The cases specify the behavior covered by every test, not how that behavior
+is tested. How the suites are executed is described under
+[Running the tests](#running-the-tests).
+
 ## Running
 
 All commands below are run from the `packages/api/implementation` directory.
@@ -43,6 +61,72 @@ listens on. The `OPENROUTER_*` variables are documented in the
 The HTTP server is configured with a 10-second read-header timeout, a
 60-second read timeout, and a 5-minute write timeout (headroom above the
 Generator's 4-minute upstream HTTP timeout).
+
+### Running the tests
+
+The two test layers live in separate Go modules and are run independently
+(both require Go 1.26): the internal unit tests from the
+`packages/api/implementation` directory, and the external blackbox tests
+from the `packages/api/verification` directory. The implementation does not
+reference the verification layer; the dependency points only from
+verification to implementation.
+
+In either directory, using `make`:
+
+```bash
+make test
+```
+
+For verbose output (in `implementation`, this includes the Ginkgo spec tree):
+
+```bash
+make test-verbose
+```
+
+`make test` and `make test-verbose` do not require OpenRouter configuration.
+
+Alternatively, using `go test` directly in either directory:
+
+```bash
+go test ./...
+```
+
+For verbose output:
+
+```bash
+go test -v ./...
+```
+
+The internal command-sandbox cases execute real sandboxed commands, so they
+need `bwrap` on `PATH` and a kernel permitting unprivileged user namespaces
+(see the toolchain requirements at the top of this document).
+
+#### The external test harness
+
+When `go test` runs in the `verification` directory, a Go test wrapper acts
+as the orchestrator:
+
+1. Dynamically compiles the API into a standalone executable binary using `go build`.
+2. Starts a **fake OpenRouter mock server** on a local port.
+3. Finds a free local network port and starts the compiled API binary as a background child process, configured via environment variables (e.g. `PORT` and `OPENROUTER_BASE_URL`).
+4. Invokes the `k6 run` command against the running API server. A single
+   failing check fails the k6 run, and with it the Go test wrapper.
+5. Cleans up all processes and binaries upon completion.
+
+This architecture guarantees that the API is tested exactly as it would run in production.
+
+The external test wrapper requires the `k6` executable. It first looks for
+`k6` on `PATH`, then falls back to `$HOME/go/bin/k6`. If k6 is not installed,
+`make install-k6` (from the `verification` directory) builds and installs it
+into `$HOME/go/bin` using the Go toolchain (`go install go.k6.io/k6@latest`) —
+useful where prebuilt k6 binaries cannot be downloaded.
+
+#### Source formatting
+
+Verification (external blackbox):
+
+- **Go sources are gofmt-formatted** — `gofmt -l` over the package's
+  `implementation/` and `verification/` directories reports no files.
 
 ## Endpoints
 
@@ -119,6 +203,55 @@ The following messages are part of the endpoint contract:
 - A Generator failure has the error message beginning `generation failed: `,
   followed by the Generator error.
 
+#### Verification
+
+External blackbox cases, driven over HTTP against the running compiled
+binary:
+
+##### Happy path
+
+- **Generates HTML successfully** — `POST /v1/representation` with `type: html` and a non-empty `spec` returns `200 OK`, `Content-Type: text/html; charset=utf-8`, `Content-Disposition: attachment; filename="representation.html"`, and a non-empty body.
+- **Generates Markdown successfully** — `POST /v1/representation` with `type: markdown` and a non-empty `spec` returns `200 OK`, `Content-Type: text/markdown; charset=utf-8`, `Content-Disposition: attachment; filename="representation.md"`, and a non-empty body.
+- **Accepts types case-insensitively and preserves their casing** — a `POST`
+  with `type: HTML` and a non-empty `spec` returns `200 OK` with the html
+  `Content-Type` and `Content-Disposition` headers. The fake upstream replies
+  with a marker body when the user prompt contains `Generate a HTML file`
+  (the original casing), and the test asserts the response body is that
+  marker, proving the Generator received the type with its casing preserved.
+
+##### Request validation
+
+- **Rejects requests with missing fields** — a `POST` with `type` but no `spec` returns `422 Unprocessable Entity` with the JSON error message exactly `fields 'type' and 'spec' are required`.
+- **Rejects requests with empty spec after trimming** — a `POST` with `type: html` and `spec: "   "` returns `422 Unprocessable Entity` with the same exact error message.
+- **Rejects a `null` JSON body as missing fields** — a `POST` whose body is the JSON literal `null` returns `422 Unprocessable Entity` (not `400`) with the same exact error message.
+- **Rejects unsupported types** — a `POST` with `type: json` and a non-empty `spec` returns `422 Unprocessable Entity` with the JSON error message exactly `unsupported type "json": only "html" and "markdown" are supported`.
+- **Rejects bodies larger than 1 MiB** — a `POST` whose body exceeds 1 MiB returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
+- **Rejects malformed JSON bodies** — a `POST` with an invalid JSON body returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
+- **Rejects trailing content after the JSON object** — a `POST` whose body is a valid object followed by non-whitespace content returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
+- **Rejects non-POST HTTP methods** — a `GET` to `/v1/representation` returns `405 Method Not Allowed` with an `Allow: POST` header and a plain-text body (`Content-Type: text/plain; charset=utf-8`).
+
+##### Routing
+
+- **Redirects the bare `/v1` path** — a `GET /v1` returns `307 Temporary Redirect` with a `Location: /v1/` header.
+- **Rejects unknown paths** — a `GET` to a path outside `/v1` returns `404 Not Found` with `Content-Type: text/plain; charset=utf-8`.
+
+##### Error handling
+
+- **Surfaces upstream generation failures as 500** — when the upstream generator fails, `POST /v1/representation` returns `500 Internal Server Error` with a JSON error beginning `generation failed: `.
+
+##### Content type mapping
+
+Internal unit cases covering the supported-type table above:
+
+- **Maps `html` to its content type and extension** — returns `text/html; charset=utf-8` and `.html`.
+- **Mapping is case-insensitive** — input `HTML` returns the same content type and extension as `html`.
+- **Maps `markdown` to its content type and extension** — returns `text/markdown; charset=utf-8` and `.md`.
+- **Rejects `htm`** — returns not-ok.
+- **Rejects `md`** — returns not-ok.
+- **Rejects `pdf`** — returns not-ok.
+- **Rejects `json`** — returns not-ok.
+- **Rejects unknown types** — returns not-ok.
+
 ## Generator
 
 The `POST /representation` endpoint does not produce file content itself. It
@@ -142,6 +275,14 @@ immediately, before any network call is made.
 
 As with the other optional configuration, an empty `OPENROUTER_BASE_URL` is
 treated as unset and uses the default.
+
+#### Verification
+
+Internal unit cases:
+
+- **Errors when API key is missing** — generation fails with an error mentioning `OPENROUTER_API_KEY`, without making a network call.
+- **Errors when model is missing** — generation fails with an error mentioning `OPENROUTER_MODEL`, without making a network call.
+- **Does not contact the API when configuration is missing** — with a missing API key, the generator returns without any request reaching the upstream server.
 
 ### Request
 
@@ -180,6 +321,22 @@ a `Content-Type: application/json` header.
 Each HTTP call to the OpenRouter API, including reading its response, times
 out after 4 minutes.
 
+#### Verification
+
+Internal unit cases covering the [Request](#request) shape, the prompt
+template, and the transport:
+
+- **Sends the configured API key as a bearer token** — the outgoing request carries `Authorization: Bearer <key>`.
+- **Sends a well-formed request to the messages endpoint** — the outgoing request is a `POST` to `{baseURL}/messages` with:
+  - `Content-Type: application/json`
+  - `model` set to the configured model id
+  - `max_tokens: 8192`
+  - `stream: false`
+  - a single tool of type `openrouter:bash`
+  - a `system` field containing `ONLY`, `code fences`, and the requested type
+  - a single `user` message
+- **Uses a 4-minute HTTP timeout** — the generator's HTTP client timeout is 4 minutes.
+
 ### Generation loop
 
 The generator operates in a loop, repeatedly calling the OpenRouter API until a `text` block is produced, up to a maximum of 20 iterations.
@@ -193,6 +350,34 @@ In each iteration, the generator reads the response, which is an Anthropic Messa
    - A `user` message containing an array of `tool_result` blocks, one for each `tool_use` block processed. Each `tool_result` block carries the `tool_use_id` and its `content` is a string with the combined standard output and standard error. If a failing command produces no output, its error text is used as `content` instead. If the command exited with a non-zero code or failed to start, the `is_error` field is set to `true`.
 3. If the loop completes 20 iterations without producing a `text` block, generation fails.
 4. A non-2xx status, an empty `content` list, a `tool_use` block whose input cannot be decoded, an unhandled content block combination, or any transport/decoding error immediately terminates the loop and fails the generation with that error.
+
+#### Verification
+
+Internal unit cases:
+
+##### Happy path
+
+- **Returns generated text with whitespace trimmed** — given a response whose first `text` block is `  <h1>hi</h1>  `, returns `<h1>hi</h1>`.
+
+##### Tool execution loop
+
+- **Executes bash commands and returns tool results** — when the response contains a `tool_use` block with a shell command, the generator executes it locally, then continues the conversation with the command output embedded in a `tool_result` block. If the next response contains a `text` block, that text is returned.
+- **Errors after 20 iterations without text** — when the model returns only `tool_use` blocks repeatedly, generation fails with an error mentioning the 20-iteration limit, after making exactly 20 upstream requests.
+
+##### Content block selection
+
+- **Skips non-text blocks** — when the response contains a `thinking` block followed by a `text` block, returns the `text` block content.
+
+##### Content block failures
+
+- **Errors when no text block and no tools are used** — when the response contains only a non-text block (e.g. `thinking`) and `stop_reason: end_turn`, generation fails with an error about no text content block.
+
+##### Response failures
+
+- **Errors on non-2xx status** — when the upstream returns a `502` status, generation fails with an error containing the status code.
+- **Errors on empty content list** — when the response has `"content": []`, generation fails with an error mentioning `no content`.
+- **Errors on undecodable response body** — when the response body is not valid JSON, generation fails.
+- **Errors on transport failure** — when the target server is unreachable, generation fails.
 
 ### Command sandbox
 
@@ -241,119 +426,13 @@ installed) is reported through the failed-command contract above: its
 `tool_result` carries the error text as `content` with `is_error` set to
 `true`.
 
-## Verification
+#### Verification
 
-Testing is split into two distinct layers to ensure both comprehensive
-coverage and true blackbox isolation. The individual test cases of both
-layers are enumerated below; they specify the behavior covered by every
-test, not how that behavior is tested.
-
-### API endpoint tests (external blackbox)
-
-Located in `packages/api/verification/`, these tests treat the API as a completely opaque compiled binary.
-
-- **Framework**: HTTP endpoints are tested using [k6](https://k6.io/).
-- **Execution Strategy**: A Go test wrapper acts as the orchestrator. When `go test` runs in the `verification` directory, the wrapper:
-  1. Dynamically compiles the API into a standalone executable binary using `go build`.
-  2. Starts a **fake OpenRouter mock server** on a local port.
-  3. Finds a free local network port and starts the compiled API binary as a background child process, configured via environment variables (e.g. `PORT` and `OPENROUTER_BASE_URL`).
-  4. Invokes the `k6 run` command against the running API server. A single
-     failing check fails the k6 run, and with it the Go test wrapper.
-  5. Cleans up all processes and binaries upon completion.
-
-This architecture guarantees that the API is tested exactly as it would run in production.
-
-The external suite also verifies source formatting: `gofmt -l` over the
-package's `implementation/` and `verification/` directories must report no
-files.
-
-#### External test cases
-
-##### Happy path
-
-- **Generates HTML successfully** — `POST /v1/representation` with `type: html` and a non-empty `spec` returns `200 OK`, `Content-Type: text/html; charset=utf-8`, `Content-Disposition: attachment; filename="representation.html"`, and a non-empty body.
-- **Generates Markdown successfully** — `POST /v1/representation` with `type: markdown` and a non-empty `spec` returns `200 OK`, `Content-Type: text/markdown; charset=utf-8`, `Content-Disposition: attachment; filename="representation.md"`, and a non-empty body.
-- **Accepts types case-insensitively and preserves their casing** — a `POST`
-  with `type: HTML` and a non-empty `spec` returns `200 OK` with the html
-  `Content-Type` and `Content-Disposition` headers. The fake upstream replies
-  with a marker body when the user prompt contains `Generate a HTML file`
-  (the original casing), and the test asserts the response body is that
-  marker, proving the Generator received the type with its casing preserved.
-
-##### Request validation
-
-- **Rejects requests with missing fields** — a `POST` with `type` but no `spec` returns `422 Unprocessable Entity` with the JSON error message exactly `fields 'type' and 'spec' are required`.
-- **Rejects requests with empty spec after trimming** — a `POST` with `type: html` and `spec: "   "` returns `422 Unprocessable Entity` with the same exact error message.
-- **Rejects a `null` JSON body as missing fields** — a `POST` whose body is the JSON literal `null` returns `422 Unprocessable Entity` (not `400`) with the same exact error message.
-- **Rejects unsupported types** — a `POST` with `type: json` and a non-empty `spec` returns `422 Unprocessable Entity` with the JSON error message exactly `unsupported type "json": only "html" and "markdown" are supported`.
-- **Rejects bodies larger than 1 MiB** — a `POST` whose body exceeds 1 MiB returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
-- **Rejects malformed JSON bodies** — a `POST` with an invalid JSON body returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
-- **Rejects trailing content after the JSON object** — a `POST` whose body is a valid object followed by non-whitespace content returns `400 Bad Request` with a JSON error beginning `invalid request body: `.
-- **Rejects non-POST HTTP methods** — a `GET` to `/v1/representation` returns `405 Method Not Allowed` with an `Allow: POST` header and a plain-text body (`Content-Type: text/plain; charset=utf-8`).
-
-##### Routing
-
-- **Redirects the bare `/v1` path** — a `GET /v1` returns `307 Temporary Redirect` with a `Location: /v1/` header.
-- **Rejects unknown paths** — a `GET` to a path outside `/v1` returns `404 Not Found` with `Content-Type: text/plain; charset=utf-8`.
-
-##### Error handling
-
-- **Surfaces upstream generation failures as 500** — when the upstream generator fails, `POST /v1/representation` returns `500 Internal Server Error` with a JSON error beginning `generation failed: `.
-
-##### Source formatting
-
-- **Go sources are gofmt-formatted** — `gofmt -l` over the package's
-  `implementation/` and `verification/` directories reports no files.
-
-### Internal unit tests
-
-Located in `packages/api/implementation/src/`, these tests cover complex internal business logic without network overhead.
-
-- **Framework**: Go's built-in `testing` package, [Ginkgo](https://onsi.github.io/ginkgo/), and [Gomega](https://onsi.github.io/gomega/).
-- **Execution Strategy**: Runs standard Go unit tests to verify internal components (e.g., the LLM generator's iteration limits, content-type mapping).
-- **Extra requirement**: the command-sandbox cases execute real sandboxed
-  commands, so they need `bwrap` on `PATH` and a kernel permitting
-  unprivileged user namespaces (see the
-  [command sandbox](#command-sandbox)).
-
-#### Internal test cases
-
-##### Content type mapping
-
-- **Maps `html` to its content type and extension** — returns `text/html; charset=utf-8` and `.html`.
-- **Mapping is case-insensitive** — input `HTML` returns the same content type and extension as `html`.
-- **Maps `markdown` to its content type and extension** — returns `text/markdown; charset=utf-8` and `.md`.
-- **Rejects `htm`** — returns not-ok.
-- **Rejects `md`** — returns not-ok.
-- **Rejects `pdf`** — returns not-ok.
-- **Rejects `json`** — returns not-ok.
-- **Rejects unknown types** — returns not-ok.
-
-##### LLM Generator
-
-###### Happy path
-
-- **Returns generated text with whitespace trimmed** — given a response whose first `text` block is `  <h1>hi</h1>  `, returns `<h1>hi</h1>`.
-- **Sends the configured API key as a bearer token** — the outgoing request carries `Authorization: Bearer <key>`.
-- **Sends a well-formed request to the messages endpoint** — the outgoing request is a `POST` to `{baseURL}/messages` with:
-  - `Content-Type: application/json`
-  - `model` set to the configured model id
-  - `max_tokens: 8192`
-  - `stream: false`
-  - a single tool of type `openrouter:bash`
-  - a `system` field containing `ONLY`, `code fences`, and the requested type
-  - a single `user` message
-
-###### Tool execution loop
-
-- **Executes bash commands and returns tool results** — when the response contains a `tool_use` block with a shell command, the generator executes it locally, then continues the conversation with the command output embedded in a `tool_result` block. If the next response contains a `text` block, that text is returned.
-- **Errors after 20 iterations without text** — when the model returns only `tool_use` blocks repeatedly, generation fails with an error mentioning the 20-iteration limit, after making exactly 20 upstream requests.
-
-###### Command sandbox cases
-
-These cases drive commands through the tool execution loop and inspect the
-`tool_result` blocks the generator sends upstream. They require `bwrap`
-(see the extra requirement under [Internal unit tests](#internal-unit-tests)).
+Internal unit cases. They drive commands through the tool execution loop and
+inspect the `tool_result` blocks the generator sends upstream. They execute
+real sandboxed commands, so they require `bwrap` on `PATH` and a kernel
+permitting unprivileged user namespaces (see the toolchain requirements at
+the top of this document).
 
 - **Hides the server's environment** — with `OPENROUTER_API_KEY` set in the
   server process's environment, a command running `env` reports `HOME=/work`
@@ -385,69 +464,3 @@ These cases drive commands through the tool execution loop and inspect the
 - **Does not wait for background processes** — a command that starts a
   30-second background `sleep` and echoes a marker returns the marker
   promptly (the test asserts completion well before the sleep could finish).
-
-###### Content block selection
-
-- **Skips non-text blocks** — when the response contains a `thinking` block followed by a `text` block, returns the `text` block content.
-
-###### Content block failures
-
-- **Errors when no text block and no tools are used** — when the response contains only a non-text block (e.g. `thinking`) and `stop_reason: end_turn`, generation fails with an error about no text content block.
-
-###### Configuration failures
-
-- **Errors when API key is missing** — generation fails with an error mentioning `OPENROUTER_API_KEY`, without making a network call.
-- **Errors when model is missing** — generation fails with an error mentioning `OPENROUTER_MODEL`, without making a network call.
-- **Does not contact the API when configuration is missing** — with a missing API key, the generator returns without any request reaching the upstream server.
-
-###### Response failures
-
-- **Errors on non-2xx status** — when the upstream returns a `502` status, generation fails with an error containing the status code.
-- **Errors on empty content list** — when the response has `"content": []`, generation fails with an error mentioning `no content`.
-- **Errors on undecodable response body** — when the response body is not valid JSON, generation fails.
-- **Errors on transport failure** — when the target server is unreachable, generation fails.
-
-###### Transport
-
-- **Uses a 4-minute HTTP timeout** — the generator's HTTP client timeout is 4 minutes.
-
-### Running tests
-
-The two layers live in separate Go modules and are run independently
-(both require Go 1.26): the internal unit tests from the
-`packages/api/implementation` directory, and the external blackbox tests
-from the `packages/api/verification` directory. The implementation does not
-reference the verification layer; the dependency points only from
-verification to implementation.
-
-In either directory, using `make`:
-
-```bash
-make test
-```
-
-For verbose output (in `implementation`, this includes the Ginkgo spec tree):
-
-```bash
-make test-verbose
-```
-
-`make test` and `make test-verbose` do not require OpenRouter configuration.
-
-The external test wrapper requires the `k6` executable. It first looks for
-`k6` on `PATH`, then falls back to `$HOME/go/bin/k6`. If k6 is not installed,
-`make install-k6` (from the `verification` directory) builds and installs it
-into `$HOME/go/bin` using the Go toolchain (`go install go.k6.io/k6@latest`) —
-useful where prebuilt k6 binaries cannot be downloaded.
-
-Alternatively, using `go test` directly in either directory:
-
-```bash
-go test ./...
-```
-
-For verbose output:
-
-```bash
-go test -v ./...
-```
