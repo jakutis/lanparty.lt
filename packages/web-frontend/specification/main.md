@@ -33,8 +33,7 @@ The spec is split across these documents:
 - [Submit flow](submit-flow.md) — what happens on form submission: validation,
   the request, the success paths, and error handling.
 - [Markdown rendering](markdown-rendering.md) — rendering `markdown` results
-  with `marked`, and the trust model for generated content.
-- [`marked` from CDN](marked-from-cdn.md) — how the `marked` library is
-  loaded.
+  with `marked`, the trust model for generated content, and how the `marked`
+  library is loaded from a CDN.
 - [Manual verification](manual-verification.md) — the manual procedure and
   the manual fallback for the browser checks.
